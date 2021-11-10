@@ -69,9 +69,11 @@ class CephConnection(BackendConnection):
     def ioctx(self):
         return self._ioctx
 
-    def create_group(self, name, attrs={}):
-        raise NotImplementedError('`create_group` not implemented '
-                                  'for this backend')
+    def create_group(self, path, attrs={}):
+        if path == _PATH_SPLIT:
+            raise Exception('Group: ', path, 'already exists')
+        else:
+            return self.root_group.create_group(path, attrs)
 
     def get_group(self):
         raise NotImplementedError('`get_group` not implemented '                           'for this backend')
