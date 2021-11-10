@@ -12,8 +12,10 @@ from dosna.backends.base import (BackendConnection, BackendDataChunk,
                                  DatasetNotFoundError)
 from dosna.util import dtype2str, shape2str, str2shape
 from dosna.util.data import slices2shape
-
+_PATH_SPLIT = '/'
 _SIGNATURE = "DosNa Dataset"
+_SIGNATURE_GROUP = "DosNa Group"
+_SIGNATURE_LINK =  "Dosna Link"
 _ENCODING = "utf-8"
 log = logging.getLogger(__name__)
 
@@ -37,6 +39,7 @@ class CephConnection(BackendConnection):
         self._cluster = rados.Rados(**rados_options)
         self._timeout = timeout
         self._ioctx = None
+        self.root_group = None
 
     def connect(self):
         if self.connected:
@@ -45,6 +48,16 @@ class CephConnection(BackendConnection):
         self._cluster.connect(timeout=self._timeout)
         self._ioctx = self._cluster.open_ioctx(self.name)
         super(CephConnection, self).connect()
+        self.create_root_group()
+
+    def create_root_group(self):
+        self.ioctx.write(_PATH_SPLIT, _SIGNATURE_GROUP.encode(_ENCODING))
+        self.ioctx.set_xattr(_PATH_SPLIT, "name", str(_PATH_SPLIT).encode(_ENCODING))
+        self.ioctx.set_xattr(_PATH_SPLIT, "attrs", str({}).encode(_ENCODING))
+        self.ioctx.set_xattr(_PATH_SPLIT, "absolute_path", str(_PATH_SPLIT).encode(_ENCODING))
+        self.ioctx.set_xattr(_PATH_SPLIT, "datasets", str({}).encode(_ENCODING))
+        self.ioctx.set_xattr(_PATH_SPLIT, "links", str({}).encode(_ENCODING))
+        self.root_group = CephGroup(self, "/")
 
     def disconnect(self):
         if self.connected:
