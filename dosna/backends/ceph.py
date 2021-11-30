@@ -85,8 +85,10 @@ class CephConnection(BackendConnection):
         else:
             return self.root_group.create_group(path, attrs)
 
-    def get_group(self):
-        raise NotImplementedError('`get_group` not implemented '                           'for this backend')
+    def get_group(self, name):
+        if name == _PATH_SPLIT:
+            return self._get_root_group()
+        return self.root_group.get_group(name)
 
     def has_group(self, name):
         try:
