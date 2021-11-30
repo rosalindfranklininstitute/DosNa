@@ -232,10 +232,7 @@ class CephGroup(BackendGroup):
                 return False
             _create_subgroups(path, subgroup, attrs)
 
-        if path in self.get_links(self.name):
-            raise Exception("Group", path, "already exists")
-
-        elif self.path_split in path:
+        if self.path_split in path:
             path_elements = path.split(self.path_split)
             group = _create_subgroups(path_elements, self, attrs)
 
