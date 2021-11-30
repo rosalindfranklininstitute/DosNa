@@ -19,6 +19,11 @@ def shape2str(dims, sep='::'):
 def str2shape(string, sep='::'):
     return tuple(map(int, string.split(sep)))
 
+def dict2str(dict):
+    return str(dict)
+
+def str2dict(string):
+    return ast.literal_eval(string)
 
 def dtype2str(dtype):
     return np.dtype(dtype).str

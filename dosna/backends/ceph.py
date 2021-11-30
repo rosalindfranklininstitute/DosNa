@@ -10,7 +10,7 @@ from dosna.backends import Backend
 from dosna.backends.base import (BackendConnection, BackendDataChunk,
                                  BackendDataset, BackendGroup, BackendLink, ConnectionError,
                                  DatasetNotFoundError)
-from dosna.util import dtype2str, shape2str, str2shape
+from dosna.util import dtype2str, shape2str, str2shape, str2dict, dict2str
 from dosna.util.data import slices2shape
 _PATH_SPLIT = '/'
 _SIGNATURE = "DosNa Dataset"
