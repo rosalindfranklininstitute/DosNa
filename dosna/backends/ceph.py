@@ -390,8 +390,17 @@ class CephGroup(BackendGroup):
         return dataset
 
     def get_dataset(self, name):
-        raise NotImplementedError('`get_dataset` not implemented '
-                                  'for this backend')
+        if not self.has_dataset(name):
+            raise DatasetNotFoundError('Dataset `%s` does not exist' % name)
+
+        shape = str2shape(self.ioctx.get_xattr(name, 'shape').decode())
+        dtype = self.ioctx.get_xattr(name, 'dtype').decode()
+        fillvalue = int(self.ioctx.get_xattr(name, 'fillvalue').decode())
+        chunk_grid = str2shape(self.ioctx.get_xattr(name, 'chunk_grid').decode())
+        chunk_size = str2shape(self.ioctx.get_xattr(name, 'chunk_size').decode())
+        dataset = CephDataset(self, name, shape, dtype, fillvalue,
+                              chunk_grid, chunk_size)
+        return dataset
 
     def has_dataset(self, name):
         try:
