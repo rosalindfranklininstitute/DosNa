@@ -188,6 +188,7 @@ class CephGroup(BackendGroup):
             self.absolute_path = absolute_path
         else:
             self.absolute_path = self.name
+        self.visited = {}
     @property
     def ioctx(self):
         return self.parent.ioctx
