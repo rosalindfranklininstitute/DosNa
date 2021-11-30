@@ -206,6 +206,14 @@ class CephGroup(BackendGroup):
         full_path = "/" + self.path_split.join(full_path_list)
         return full_path
 
+    def create_absolute_path(self, path):
+        current_path = self.get_absolute_path()
+        if current_path == self.path_split:
+            current_path = path
+        else:
+            current_path += self.path_split + path
+        return current_path
+
 
     def create_group(self, parent, name, attrs={}):
         raise NotImplementedError('`create_group` not implemented '
