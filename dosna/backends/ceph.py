@@ -272,6 +272,42 @@ class CephGroup(BackendGroup):
         raise NotImplementedError('`get_group` not implemented '
                                   'for this backend')
 
+    def get_object(self, name):
+        if self.has_group(name) and (name not in self.visited):
+            name = self.ioctx.get_xattr(name, "name").decode()
+            attrs = str2dict(self.ioctx.get_xattr(name, 'attrs').decode())
+            absolute_path = self.ioctx.get_xattr(name, "absolute_path").decode()
+            datasets = str2dict(self.ioctx.get_xattr(name, "datasets").decode())
+            links = str2dict(self.ioctx.get_xattr(name, "links").decode())
+            parent = self.ioctx.get_xattr(name, "parent").decode()
+            if parent == self.name:
+                parent = self
+            else:
+                parent = self.get_object(parent)
+            group = CephGroup(parent, name, attrs, datasets=datasets, links={}, absolute_path=absolute_path,
+                              path_split="/")
+            self.visited[group.name] = group
+            links = str2dict(self.ioctx.get_xattr(name, "links").decode())
+            for key, value in links.items():
+                if value["source"] == name:
+                    source = group
+                elif value["source"] in self.visited:
+                    source = self.visited[value["source"]]
+                else:
+                    source = self.get_object(value["source"])
+                if value["target"] == name:
+                    target = group
+                elif value["target"] in self.visited:
+                    target = self.visited[value["target"]]
+                else:
+                    target = self.get_object(value["target"])
+                if target is None:
+                    group.links[key] = CephLink(source, target, source.name + "->" + str(target))
+                    self.visited[group.name] = group
+                    self.visited[name]
+                group.links[key] = CephLink(source, target, source.name + "->" + target.name)
+                self.visited[group.name] = group
+        return self.visited[name]
 
     def has_group(self, name):
         try:
