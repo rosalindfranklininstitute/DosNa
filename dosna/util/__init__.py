@@ -5,6 +5,7 @@ from __future__ import print_function
 
 import logging
 import time
+import ast
 from os.path import join
 
 import numpy as np
