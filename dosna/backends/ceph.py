@@ -178,8 +178,19 @@ class CephLink(BackendLink):
 
 
 class CephGroup(BackendGroup):
-    def __init__(self, parent, name, attrs, path_split="/", *args, **kwargs):
+    def __init__(self, parent, name, attrs={}, datasets={}, links={}, absolute_path=None, path_split="/", *args, **kwargs):
         super(CephGroup, self).__init__(parent, name, attrs)
+        self.attrs = attrs
+        self.links = links
+        self.datasets = datasets
+        self.path_split = path_split
+        if self.name != self.path_split:
+            self.absolute_path = absolute_path
+        else:
+            self.absolute_path = self.name
+    @property
+    def ioctx(self):
+        return self.parent.ioctx
 
     def create_group(self, parent, name, attrs={}):
         raise NotImplementedError('`create_group` not implemented '
