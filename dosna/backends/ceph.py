@@ -398,9 +398,19 @@ class CephGroup(BackendGroup):
         return valid
 
     def del_dataset(self, name):
-        """Remove dataset metadata only"""
-        raise NotImplementedError('`del_dataset` not implemented '
-                                  'for this backend')
+        log.debug("Removing dataset %s", name)
+        if self.has_dataset(name):
+            self.ioctx.remove_object(name)
+            datasets = str2dict(self.ioctx.get_xattr(self.name, "datasets").decode())
+            del datasets[name]
+            self.ioctx.set_xattr(self.name, "datasets", dict2str(datasets).encode(_ENCODING))
+            dataset = {}
+            for key, value in datasets.items():
+                dataset[key] = self.get_dataset(value["name"])
+            self.datasets = dataset
+        else:
+            raise DatasetNotFoundError(
+                'Dataset `{}` does not exist'.format(name))
 
     def deserialise_link(self, links):
         link = {}
