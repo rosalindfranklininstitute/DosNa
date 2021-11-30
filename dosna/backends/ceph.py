@@ -219,6 +219,27 @@ class CephGroup(BackendGroup):
         raise NotImplementedError('`create_group` not implemented '
                                   'for this backend')
 
+    def create_object(self, path, attrs={}):
+        attrs = {str(key): str(value) for key, value in attrs.items()}
+        absolute_path = self.create_absolute_path(path)
+        self.ioctx.write(path, _SIGNATURE_GROUP.encode(_ENCODING))
+        self.ioctx.set_xattr(path, "name", str(path).encode(_ENCODING))
+        self.ioctx.set_xattr(path, "attrs", str(attrs).encode(_ENCODING))
+        self.ioctx.set_xattr(path, "absolute_path", str(absolute_path).encode(_ENCODING))
+        self.ioctx.set_xattr(path, "datasets", str({}).encode(_ENCODING))
+        self.ioctx.set_xattr(path, "links", str({}).encode(_ENCODING))
+        self.ioctx.set_xattr(path, "parent", str(self.name).encode(_ENCODING))
+        group = CephGroup(self, path, attrs, datasets={}, links={},absolute_path=absolute_path)
+        links = str2dict(self.ioctx.get_xattr(self.name,"links").decode())
+        links[path] = {"name": self.name + "->" + group.name,
+                       "source": self.name,
+                       "target": group.name}
+        self.ioctx.set_xattr(self.name, "links", dict2str(links).encode(_ENCODING))
+        link = CephLink(self, group, group.name)
+        self.links[path] = link
+        return group
+
+
     def get_group(self):
         raise NotImplementedError('`get_group` not implemented '
                                   'for this backend')
