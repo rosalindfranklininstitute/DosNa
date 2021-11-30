@@ -78,9 +78,13 @@ class CephConnection(BackendConnection):
     def get_group(self):
         raise NotImplementedError('`get_group` not implemented '                           'for this backend')
 
-    def has_group(self):
-        raise NotImplementedError('`has_group` not implemented '
-                                  'for this backend')
+    def has_group(self, name):
+        try:
+            valid = self.ioctx.stat(name)[0] == len(_SIGNATURE_GROUP.encode(_ENCODING)) and \
+                    self.ioctx.read(name) == _SIGNATURE_GROUP.encode(_ENCODING)
+        except rados.ObjectNotFound:
+            return False
+        return valid
 
     def del_group(self):
         raise NotImplementedError('`del_group` not implemented '
