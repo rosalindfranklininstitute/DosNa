@@ -338,6 +338,21 @@ class CephGroup(BackendGroup):
         raise NotImplementedError('`del_group` not implemented '
                                   'for this backend')
 
+    def get_links(self, group):
+        links = str2dict(self.ioctx.get_xattr(self.name, "links").decode())
+        for key, value in links.items():
+            path = value["name"]
+            source = value["source"]
+            if source == self.name:
+                source = self
+            else:
+                source = self.get_group(source)
+            target = value["target"]
+            target = self.get_group(target)
+            links[key] = CephLink(source, target, path)
+        return links
+
+
     def create_dataset(self, name, shape=None, dtype=np.float32, fillvalue=0,
                        data=None, chunk_size=None):
         raise NotImplementedError('`create_dataset` not implemented '
