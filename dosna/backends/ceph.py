@@ -334,9 +334,11 @@ class CephGroup(BackendGroup):
         return valid
 
 
-    def del_group(self):
-        raise NotImplementedError('`del_group` not implemented '
-                                  'for this backend')
+    def del_group(self, path):
+        if self.has_group(path):
+            self.ioctx.remove_object(path)
+            return True
+        return False
 
     def get_links(self, group):
         links = str2dict(self.ioctx.get_xattr(self.name, "links").decode())
