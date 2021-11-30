@@ -214,6 +214,34 @@ class CephGroup(BackendGroup):
             current_path += self.path_split + path
         return current_path
 
+    def create_group(self, path, attrs={}):
+
+        def _create_subgroups(path, group, attrs={}):
+            path.pop(0)
+            if len(path) == 0:
+                return False
+            elif len(path) == 1:
+                subgroup = group.create_object(path[0], attrs)
+            else:
+                subgroup = group.create_object(path[0])
+            link = group.create_link(path[0])
+            group.links[path[0]] = link
+
+            if len(path) == 0:
+                return False
+            _create_subgroups(path, subgroup, attrs)
+
+        if path in self.get_links(self.name):
+            raise Exception("Group", path, "already exists")
+
+        elif self.path_split in path:
+            path_elements = path.split(self.path_split)
+            group = _create_subgroups(path_elements, self, attrs)
+
+        else:
+            group = self.create_object(path, attrs)
+        return group
+
     def create_link(self, path):
         links = str2dict(self.ioctx.get_xattr(self.name,"links").decode())
         link_name = self.name + "->" + path
