@@ -303,6 +303,14 @@ class CephGroup(BackendGroup):
         raise NotImplementedError('`del_dataset` not implemented '
                                   'for this backend')
 
+    def deserialise_link(self, links):
+        link = {}
+        for key, value in links.items():
+            path = value["name"]
+            source = value["source"]
+            target = value["target"]
+            link[key] = CephLink(source, target, path)
+        return link
 
 class CephDataset(BackendDataset):
     """
