@@ -192,6 +192,21 @@ class CephGroup(BackendGroup):
     def ioctx(self):
         return self.parent.ioctx
 
+    def get_absolute_path(self):
+        def _find_path(group):
+            full_path = []
+            if group.name == "/":
+                return full_path
+            else:
+                full_path.append(group.name)
+                full_path += _find_path(group.parent)
+            return full_path
+        full_path_list = _find_path(self)
+        full_path_list.reverse()
+        full_path = "/" + self.path_split.join(full_path_list)
+        return full_path
+
+
     def create_group(self, parent, name, attrs={}):
         raise NotImplementedError('`create_group` not implemented '
                                   'for this backend')
