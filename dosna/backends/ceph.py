@@ -351,11 +351,39 @@ class CephGroup(BackendGroup):
             links[key] = CephLink(source, target, path)
         return links
 
-
     def create_dataset(self, name, shape=None, dtype=np.float32, fillvalue=0,
                        data=None, chunk_size=None):
-        raise NotImplementedError('`create_dataset` not implemented '
-                                  'for this backend')
+        if not ((shape is not None and dtype is not None) or data is not None):
+            raise Exception('Provide `shape` and `dtype` or `data`')
+        if self.has_dataset(name):
+            raise Exception('Dataset `%s` already exists' % name)
+
+        if data is not None:
+            shape = data.shape
+            dtype = data.dtype
+
+        if chunk_size is None:
+            chunk_size = shape
+
+        chunk_grid = (np.ceil(np.asarray(shape, float) / chunk_size)) \
+            .astype(int)
+
+        log.debug('creating dataset %s with shape:%s chunk_size:%s '
+                  'chunk_grid:%s', name, shape, chunk_size, chunk_grid)
+        self.ioctx.write(name, _SIGNATURE.encode(_ENCODING))
+        self.ioctx.set_xattr(name, 'shape', shape2str(shape).encode(_ENCODING))
+        self.ioctx.set_xattr(name, 'dtype', dtype2str(dtype).encode(_ENCODING))
+        self.ioctx.set_xattr(name, 'fillvalue', repr(fillvalue).encode(_ENCODING))
+        self.ioctx.set_xattr(name, 'chunk_grid', shape2str(chunk_grid).encode(_ENCODING))
+        self.ioctx.set_xattr(name, 'chunk_size', shape2str(chunk_size).encode(_ENCODING))
+        dataset = CephDataset(self, name, shape, dtype, fillvalue,
+                              chunk_grid, chunk_size)
+        datasets = str2dict(self.ioctx.get_xattr(self.name, "datasets").decode())
+        dataset_name = name
+        datasets[dataset_name] = {"name": dataset_name}
+        self.ioctx.set_xattr(self.name, "datasets", dict2str(datasets).encode(_ENCODING))
+        self.datasets[dataset_name] = dataset
+        return dataset
 
     def get_dataset(self, name):
         raise NotImplementedError('`get_dataset` not implemented '
