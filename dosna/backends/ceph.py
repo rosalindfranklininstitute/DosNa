@@ -267,10 +267,26 @@ class CephGroup(BackendGroup):
         self.links[path] = link
         return group
 
-
-    def get_group(self):
-        raise NotImplementedError('`get_group` not implemented '
-                                  'for this backend')
+    def get_group(self, path):
+        def _find_group(path, links):
+            first_element = path[0]
+            if first_element in links:
+                object_link = links.get(first_element).target
+                if len(path) > 1:
+                    path.pop(0)
+                    object_link = self.deserialise_link(str2dict(self.ioctx.get_xattr(object_link, "links").decode()))
+                    return _find_group(path, object_link)
+                else:
+                    if self.has_group(object_link):
+                        group = self.get_object(object_link)
+                        return group
+        path_elements = path.split(self.path_split)
+        if path.startswith(self.path_split):
+            path_elements.pop(0)
+        links = self.deserialise_link(str2dict(self.ioctx.get_xattr(self.name, "links").decode()))
+        group = _find_group(path_elements, links)
+        self.visited = {}
+        return group
 
     def get_object(self, name):
         if self.has_group(name) and (name not in self.visited):
