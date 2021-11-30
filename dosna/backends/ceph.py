@@ -390,8 +390,12 @@ class CephGroup(BackendGroup):
                                   'for this backend')
 
     def has_dataset(self, name):
-        raise NotImplementedError('`has_dataset` not implemented '
-                                  'for this backend')
+        try:
+            valid = self.ioctx.stat(name)[0] == len(_SIGNATURE.encode(_ENCODING)) and \
+                self.ioctx.read(name) == _SIGNATURE.encode(_ENCODING)
+        except rados.ObjectNotFound:
+            return False
+        return valid
 
     def del_dataset(self, name):
         """Remove dataset metadata only"""
