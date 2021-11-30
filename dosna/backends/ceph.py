@@ -297,7 +297,11 @@ class CephGroup(BackendGroup):
                 parent = self
             else:
                 parent = self.get_object(parent)
-            group = CephGroup(parent, name, attrs, datasets=datasets, links={}, absolute_path=absolute_path,
+            datasets = str2dict(self.ioctx.get_xattr(name, "datasets").decode())
+            dataset = {}
+            for key, value in datasets.items():
+                dataset[key] = self.get_dataset(value["name"])
+            group = CephGroup(parent, name, attrs, datasets=dataset, links={}, absolute_path=absolute_path,
                               path_split="/")
             self.visited[group.name] = group
             links = str2dict(self.ioctx.get_xattr(name, "links").decode())
