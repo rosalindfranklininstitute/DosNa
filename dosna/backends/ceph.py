@@ -48,7 +48,10 @@ class CephConnection(BackendConnection):
         self._cluster.connect(timeout=self._timeout)
         self._ioctx = self._cluster.open_ioctx(self.name)
         super(CephConnection, self).connect()
-        self.create_root_group()
+        if self.has_group(_PATH_SPLIT) == False:
+            self.create_root_group()
+        self.root_group = self.get_group(_PATH_SPLIT)
+
 
     def create_root_group(self):
         self.ioctx.write(_PATH_SPLIT, _SIGNATURE_GROUP.encode(_ENCODING))
