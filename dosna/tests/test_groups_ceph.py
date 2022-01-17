@@ -6,8 +6,12 @@ from dosna.backends.base import (
     GroupNotFoundError,
     GroupExistsError,
 )
-
+_SIGNATURE = "DosNa Dataset"
+_SIGNATURE_GROUP = "DosNa Group"
+_SIGNATURE_LINK =  "Dosna Link"
+_ENCODING = "utf-8"
 PATH_SPLIT = "/"
+
 
 class GroupTest(unittest.TestCase):
     """
@@ -39,3 +43,7 @@ class GroupTest(unittest.TestCase):
             for obj in self.connection_handle.ioctx.list_objects():
                 self.connection_handle.ioctx.remove_object(obj.key)
         self.connection_handle.disconnect()
+
+
+    def test_root_group_exists(self):
+        self.assertEqual(_SIGNATURE_GROUP, str(self.connection_handle.ioctx.read(PATH_SPLIT).decode()))
