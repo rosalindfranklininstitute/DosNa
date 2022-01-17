@@ -172,3 +172,31 @@ class GroupTest(unittest.TestCase):
         self.assertEqual(root.get_links()["/A"].target.attrs, A_attrs)
         # Check /A/B doesn't have attrs of /A/B/C
         self.assertNotEqual(root.get_links()["/A"].target.get_links()["/A/B"].target.attrs, attrs)
+
+    def test_create_subgroup_with_group(self):
+        root = self.connection_handle.get_group(PATH_SPLIT)
+        attrs = {"C1": "V1"}
+        group_name = "/A"
+        A_attrs = {"A1": "V1"}
+        A = self.connection_handle.create_group(group_name, A_attrs)
+        self.assertEqual(type(A), CpuGroup)
+        group_name = "/B/C"
+        C = A.create_group(group_name)
+        self.assertEqual(type(C), CpuGroup)
+        self.check_group(C, "/A/B/C", "/A/A/B/A/B/C")
+        self.assertNotIn(C.name, root.get_links())
+        self.assertIn("/A/B", A.get_links())
+        self.assertNotIn("/A/B/C", A.get_links())
+        with self.assertRaises(GroupExistsError):
+            group_obj = A.create_group(group_name)
+
+
+    def test__has_group_object(self):
+        groups = "A/B/C"
+        self.connection_handle.create_group(groups)
+        root = self.connection_handle.get_group(PATH_SPLIT)
+        self.assertTrue(root._has_group_object("/A"))
+        self.assertTrue(root._has_group_object("/A/B"))
+        self.assertTrue(root._has_group_object("/A/B/C"))
+        self.assertFalse(root._has_group_object("/A/B/C/D"))
+        self.assertFalse(root._has_group_object("/B/C"))
