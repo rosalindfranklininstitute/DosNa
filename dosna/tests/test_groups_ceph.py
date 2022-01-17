@@ -74,3 +74,24 @@ class GroupTest(unittest.TestCase):
 
     def test_root_group_exists(self):
         self.assertEqual(_SIGNATURE_GROUP, str(self.connection_handle.ioctx.read(PATH_SPLIT).decode()))
+
+    def test__create_group_object(self):
+        name = "/A"
+        iocxt = self.connection_handle.instance.ioctx
+        root = self.connection_handle.get_group(PATH_SPLIT)
+        self.assertEqual(type(root), CpuGroup)
+
+        A = root._create_group_object(name)
+        # This should be a ceph group as it's access via a private method within CephGroup
+        self.assertEqual(type(A), CephGroup)
+        self.check_group(A, name, name, iocxt)
+        attrs = {"A1": "V1"}
+
+        A = root._create_group_object(name, attrs)
+        # This should be a ceph group as it's access via a private method within CephGroup
+        self.assertEqual(type(A), CephGroup)
+        self.check_group(A, name, name, iocxt, attrs)
+
+        # Check overwrites
+        A = root._create_group_object(name)
+        self.check_group(A, name, name, iocxt)
