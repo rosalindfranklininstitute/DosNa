@@ -111,6 +111,14 @@ class GroupTest(unittest.TestCase):
         self.assertNotIn(group_name, root.links)  # TODO: make links a private field.
         self.assertIn(group_name, root.get_links())
 
+    def test_create_existing_group(self):
+        root = self.connection_handle.get_group(PATH_SPLIT)
+        group_name = "/FakeGroup"
+        group_obj = self.connection_handle.create_group(group_name)
+        with self.assertRaises(GroupExistsError):
+            group_obj = self.connection_handle.create_group(group_name)
+
+
     def test_create_group_with_attrs(self):
         root = self.connection_handle.get_group(PATH_SPLIT)
         group_name = "/FakeGroup"
