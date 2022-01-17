@@ -52,7 +52,7 @@ class GroupTest(unittest.TestCase):
     def check_group(
         self, group, name, absolute_path, iocxt, attrs={}, links={}, datasets={}
     ):
-
+        self.assertEqual(_SIGNATURE_GROUP, str(self.connection_handle.ioctx.read(PATH_SPLIT).decode()))
         self.assertEqual(group.name, str(iocxt.get_xattr(name, "name").decode()))
         self.assertEqual(group.name, name)
         self.assertEqual(
