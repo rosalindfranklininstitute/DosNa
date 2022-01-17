@@ -96,3 +96,13 @@ class GroupTest(unittest.TestCase):
         # Check overwrites
         A = root._create_group_object(name)
         self.check_group(A, name, name)
+
+    def test_create_group(self):
+        root = self.connection_handle.get_group(PATH_SPLIT)
+        group_name = "/FakeGroup"
+        group_obj = self.connection_handle.create_group(group_name)
+        self.assertEqual(type(group_obj), CpuGroup)
+        self.check_group(group_obj, group_name, group_name)
+        self.assertEqual(type(root), CpuGroup)
+        self.assertNotIn(group_name, root.links)  # TODO: make links a private field.
+        self.assertIn(group_name, root.get_links())
