@@ -132,3 +132,31 @@ class GroupTest(unittest.TestCase):
         # Check /A/B doesn't have attrs of /A/B/C
         self.assertNotEqual(root.get_links()["/A"].target.get_links()["/A/B"].target.attrs, attrs)
 
+    def test_create_subgroup_with_existing_groups(self):
+        root = self.connection_handle.get_group(PATH_SPLIT)
+        attrs = {"C1": "V1"}
+
+        group_name = "/A"
+        A_attrs = {"A1": "V1"}
+        A = self.connection_handle.create_group(group_name, A_attrs)
+        self.assertEqual(type(A), CpuGroup)
+        self.check_group(A, group_name, "/A", A_attrs)
+        self.assertIn("/A", root.get_links())
+        self.assertDictEqual(A.attrs, A_attrs)
+        group_name = "/A/B"
+        B = self.connection_handle.create_group(group_name)
+        self.assertEqual(type(B), CpuGroup)
+        self.check_group(B, group_name, "/A/A/B", )
+        self.assertIn("/A/B", A.get_links())
+
+        groups = "/A/B/C"  # Expected /A -> /A/B -> /A/B/C
+        group_obj = self.connection_handle.create_group(groups, attrs)  # Group /A/B/C as last group
+        self.assertEqual(type(group_obj), CpuGroup)
+        self.check_group(group_obj, groups, "/A/A/B/A/B/C", attrs)
+        self.assertNotIn(groups, root.get_links())
+        self.assertIn("/A/B/C", B.get_links())
+        # Check /A doesn't have attrs of /A/B/C
+        self.assertNotEqual(root.get_links()["/A"].target.attrs, attrs)
+        self.assertEqual(root.get_links()["/A"].target.attrs, A_attrs)
+        # Check /A/B doesn't have attrs of /A/B/C
+        self.assertNotEqual(root.get_links()["/A"].target.get_links()["/A/B"].target.attrs, attrs)
