@@ -77,6 +77,10 @@ class GroupTest(unittest.TestCase):
     def test_root_group_exists(self):
         self.assertEqual(_SIGNATURE_GROUP, str(self.connection_handle.ioctx.read(PATH_SPLIT).decode()))
 
+    def test_create_root_group(self):
+        with self.assertRaises(GroupExistsError):
+            self.connection_handle.create_group("/")
+
     def test__create_group_object(self):
         name = "/A"
         root = self.connection_handle.get_group(PATH_SPLIT)
