@@ -117,3 +117,18 @@ class GroupTest(unittest.TestCase):
         self.assertEqual(type(root), CpuGroup)
         self.assertNotIn(group_name, root.links)
         self.assertIn(group_name, root.get_links())
+
+    def test_create_subgroups(self):
+        root = self.connection_handle.get_group(PATH_SPLIT)
+        attrs = {"C1": "V1"}
+        groups = "/A/B/C"  # Expected /A -> /A/B -> /A/B/C
+        group_obj = self.connection_handle.create_group(groups, attrs)  # Group /A/B/C as last group
+        self.assertEqual(type(group_obj), CpuGroup)
+        self.check_group(group_obj, groups, "/A/A/B/A/B/C", attrs)
+        self.assertNotIn(groups, root.get_links())
+        self.assertIn("/A", root.get_links())
+        # Check /A doesn't have attrs of /A/B/C
+        self.assertNotEqual(root.get_links()["/A"].target.attrs, attrs)
+        # Check /A/B doesn't have attrs of /A/B/C
+        self.assertNotEqual(root.get_links()["/A"].target.get_links()["/A/B"].target.attrs, attrs)
+
