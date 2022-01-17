@@ -1,6 +1,11 @@
 import time
 import dosna as dn
 import unittest
+
+from dosna.engines.cpu import CpuGroup
+from dosna.backends.ceph import CephGroup
+
+from dosna.util import str2dict
 from dosna.backends.base import (
     DatasetNotFoundError,
     GroupNotFoundError,
@@ -44,6 +49,28 @@ class GroupTest(unittest.TestCase):
                 self.connection_handle.ioctx.remove_object(obj.key)
         self.connection_handle.disconnect()
 
+    def check_group(
+        self, group, name, absolute_path, iocxt, attrs={}, links={}, datasets={}
+    ):
+
+        self.assertEqual(group.name, str(iocxt.get_xattr(name, "name").decode()))
+        self.assertEqual(group.name, name)
+        self.assertEqual(
+            group.absolute_path, str(iocxt.get_xattr(name, "absolute_path").decode())
+        )
+        self.assertEqual(group.absolute_path, absolute_path)
+        self.assertDictEqual(
+            group.attrs, str2dict(str(iocxt.get_xattr(name, "attrs").decode()))
+        )
+        self.assertEqual(group.attrs, attrs)
+        self.assertDictEqual(
+            group.links, str2dict(str(iocxt.get_xattr(name, "links").decode()))
+        )
+        self.assertDictEqual(group.links, links)
+        self.assertDictEqual(
+            group.datasets, str2dict(str(iocxt.get_xattr(name, "datasets").decode()))
+        )
+        self.assertDictEqual(group.datasets, datasets)
 
     def test_root_group_exists(self):
         self.assertEqual(_SIGNATURE_GROUP, str(self.connection_handle.ioctx.read(PATH_SPLIT).decode()))
