@@ -106,3 +106,14 @@ class GroupTest(unittest.TestCase):
         self.assertEqual(type(root), CpuGroup)
         self.assertNotIn(group_name, root.links)  # TODO: make links a private field.
         self.assertIn(group_name, root.get_links())
+
+    def test_create_group_with_attrs(self):
+        root = self.connection_handle.get_group(PATH_SPLIT)
+        group_name = "/FakeGroup"
+        attrs = {"A1": "V1"}
+        group_obj = self.connection_handle.create_group(group_name, attrs)
+        self.assertEqual(type(group_obj), CpuGroup)
+        self.check_group(group_obj, group_name, group_name, attrs)
+        self.assertEqual(type(root), CpuGroup)
+        self.assertNotIn(group_name, root.links)
+        self.assertIn(group_name, root.get_links())
