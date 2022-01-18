@@ -217,6 +217,23 @@ class GroupTest(unittest.TestCase):
         with self.assertRaises(GroupNotFoundError):
             root.del_group("/A/B/C")
 
+    def test_get_group(self):
+        root = self.connection_handle.get_group(PATH_SPLIT)
+        group_name = "/A/B"
+        root.create_group(group_name)
+        B = root.get_group("/A/B")
+        self.assertEqual(type(B), CpuGroup)
+        self.check_group(B, "/A/B", "/A/A/B")
+        A = root.get_group("/A")
+        self.assertEqual(type(A), CpuGroup)
+        self.check_group(A, "/A", "/A")
+        with self.assertRaises(GroupNotFoundError):
+            root.get_group("/A/B/C")
+        B = A.get_group("/A/B")
+        self.assertEqual(type(B), CpuGroup)
+        self.check_group(B, "/A/B", "/A/A/B")
+
+
     def test_get_group_object(self):
         name = "/A"
         root = self.connection_handle.get_group(PATH_SPLIT)
