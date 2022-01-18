@@ -219,3 +219,23 @@ class GroupTest(unittest.TestCase):
         with self.assertRaises(rados.ObjectNotFound):
             self.ioctx.read("/A/B")
         self.assertFalse(root._del_group_object("/A/B"))
+
+    def test_del_group(self):  # TODO: Added del_group with dataset check
+        groups = "/A/B/C"
+        root = self.connection_handle.get_group(PATH_SPLIT)
+
+        root.create_group(groups)
+        root.del_group("/A/B/C")
+        self.assertTrue(root.has_group("/A"))
+        self.assertTrue(root.has_group("/A/B"))
+        self.assertFalse(root.has_group("/A/B/C"))
+        with self.assertRaises(GroupNotFoundError):
+            root.del_group("/A/B/C")
+
+        root.del_group("/A")
+        root.create_group(groups)
+        self.assertFalse(root.has_group("/A"))
+        self.assertFalse(root.has_group("/A/B"))
+        self.assertFalse(root.has_group("/A/B/C"))
+        with self.assertRaises(GroupNotFoundError):
+            root.del_group("/A/B/C")
