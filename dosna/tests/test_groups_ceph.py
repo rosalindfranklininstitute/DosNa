@@ -238,3 +238,14 @@ class GroupTest(unittest.TestCase):
             self.assertEqual(links[link].name, root.get_links()[link].name)
             self.assertEqual(links[link].source, root.get_links()[link].source)
             self.assertEqual(links[link].target, root.get_links()[link].target)
+
+    def test_get_attrs(self):
+        root = self.connection_handle.get_group(PATH_SPLIT)
+        group_name = "/FakeGroup"
+        attrs = {"A1": "V1"}
+        group_obj = self.connection_handle.create_group(group_name, attrs)
+        self.assertEqual(type(group_obj), CpuGroup)
+        self.check_group(group_obj, group_name, group_name)
+        self.assertEqual(group_obj.get_attrs(), attrs)
+
+
