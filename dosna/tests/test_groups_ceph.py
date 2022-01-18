@@ -3,8 +3,8 @@ import rados
 import dosna as dn
 import unittest
 
-from dosna.engines.cpu import CpuGroup
-from dosna.backends.ceph import CephGroup
+from dosna.engines.cpu import CpuGroup, CpuLink
+from dosna.backends.ceph import CephGroup, CephLink
 
 from dosna.util import str2dict
 from dosna.backends.base import (
@@ -239,3 +239,13 @@ class GroupTest(unittest.TestCase):
         self.assertFalse(root.has_group("/A/B/C"))
         with self.assertRaises(GroupNotFoundError):
             root.del_group("/A/B/C")
+
+    def test_get_group_object(self):
+        name = "/A"
+        root = self.connection_handle.get_group(PATH_SPLIT)
+        self.assertEqual(type(root), CpuGroup)
+        A = root.create_group(name)
+        self.assertEqual(type(A), CpuGroup)
+        A_get = root._get_group_object(name)
+        self.assertEqual(type(A_get), CephGroup)
+        self.check_group(A_get, name, name)
