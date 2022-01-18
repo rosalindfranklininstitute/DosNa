@@ -243,6 +243,10 @@ class GroupTest(unittest.TestCase):
         A_get = root._get_group_object(name)
         self.assertEqual(type(A_get), CephGroup)
         self.check_group(A_get, name, name)
+        with self.assertRaises(GroupNotFoundError):  # TODO: Is this check required?
+            root._get_group_object("/B")
+
+
 
     def test_get_links(self):
         name = "/A"
