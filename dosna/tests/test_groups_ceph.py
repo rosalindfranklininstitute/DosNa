@@ -1,4 +1,5 @@
 import time
+import rados
 import dosna as dn
 import unittest
 
@@ -200,3 +201,22 @@ class GroupTest(unittest.TestCase):
         self.assertTrue(root._has_group_object("/A/B/C"))
         self.assertFalse(root._has_group_object("/A/B/C/D"))
         self.assertFalse(root._has_group_object("/B/C"))
+
+    def test__del_group_object(self):
+        groups = "A/B/C"
+        self.connection_handle.create_group(groups)
+        root = self.connection_handle.get_group(PATH_SPLIT)
+        self.assertTrue(root._del_group_object("/A/B/C"))
+        with self.assertRaises(rados.ObjectNotFound):
+            self.iocxt.read("/A/B/C")
+        self.assertFalse(root._del_group_object("/A/B/C"))
+
+        self.assertTrue(root._del_group_object("/A"))
+        with self.assertRaises(rados.ObjectNotFound):
+            self.iocxt.read("/A")
+        self.assertFalse(root._del_group_object("/A"))
+
+        self.assertTrue(root._del_group_object("/A/B"))
+        with self.assertRaises(rados.ObjectNotFound):
+            self.iocxt.read("/A/B")
+        self.assertFalse(root._del_group_object("/A/B"))
