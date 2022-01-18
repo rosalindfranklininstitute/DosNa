@@ -31,13 +31,13 @@ class GroupTest(unittest.TestCase):
         dn.use(backend="ceph", engine="cpu")
         cls.connection_handle = dn.Connection("dosna", conffile="ceph.conf")
         cls.connection_handle.connect()
-        cls.iocxt = cls.connection_handle.instance.ioctx
+        cls.ioctx = cls.connection_handle.instance.ioctx
 
     def setUp(self):
         if self.connection_handle.connected == False:
             self.connection_handle = dn.Connection("dosna", conffile="ceph.conf")
             self.connection_handle.connect()
-            self.iocxt = self.connection_handle.instance.ioctx
+            self.ioctx = self.connection_handle.instance.ioctx
         self._started_at = time.time()
 
     @classmethod
@@ -56,27 +56,27 @@ class GroupTest(unittest.TestCase):
         self, group, name, absolute_path, attrs={}, links={}, datasets={}
     ):
         self.assertEqual(_SIGNATURE_GROUP, str(self.connection_handle.ioctx.read(PATH_SPLIT).decode()))
-        self.assertEqual(group.name, str(self.iocxt.get_xattr(name, "name").decode()))
+        self.assertEqual(group.name, str(self.ioctx.get_xattr(name, "name").decode()))
         self.assertEqual(group.name, name)
         self.assertEqual(
-            group.absolute_path, str(self.iocxt.get_xattr(name, "absolute_path").decode())
+            group.absolute_path, str(self.ioctx.get_xattr(name, "absolute_path").decode())
         )
         self.assertEqual(group.absolute_path, absolute_path)
         self.assertDictEqual(
-            group.attrs, str2dict(str(self.iocxt.get_xattr(name, "attrs").decode()))
+            group.attrs, str2dict(str(self.ioctx.get_xattr(name, "attrs").decode()))
         )
         self.assertEqual(group.attrs, attrs)
         self.assertDictEqual(
-            group.links, str2dict(str(self.iocxt.get_xattr(name, "links").decode()))
+            group.links, str2dict(str(self.ioctx.get_xattr(name, "links").decode()))
         )
         self.assertDictEqual(group.links, links)
         self.assertDictEqual(
-            group.datasets, str2dict(str(self.iocxt.get_xattr(name, "datasets").decode()))
+            group.datasets, str2dict(str(self.ioctx.get_xattr(name, "datasets").decode()))
         )
         self.assertDictEqual(group.datasets, datasets)
 
     def test_root_group_exists(self):
-        self.assertEqual(_SIGNATURE_GROUP, str(self.connection_handle.ioctx.read(PATH_SPLIT).decode()))
+        self.assertEqual(_SIGNATURE_GROUP, str(self.ioctx.read(PATH_SPLIT).decode()))
 
     def test_create_root_group(self):
         with self.assertRaises(GroupExistsError):
@@ -115,7 +115,7 @@ class GroupTest(unittest.TestCase):
     def test_create_existing_group(self):
         root = self.connection_handle.get_group(PATH_SPLIT)
         group_name = "/FakeGroup"
-        group_obj = self.connection_handle.create_group(group_name)
+        self.connection_handle.create_group(group_name)
         with self.assertRaises(GroupExistsError):
             group_obj = self.connection_handle.create_group(group_name)
 
@@ -191,7 +191,6 @@ class GroupTest(unittest.TestCase):
         with self.assertRaises(GroupExistsError):
             group_obj = A.create_group(group_name)
 
-
     def test__has_group_object(self):
         groups = "A/B/C"
         self.connection_handle.create_group(groups)
@@ -208,15 +207,15 @@ class GroupTest(unittest.TestCase):
         root = self.connection_handle.get_group(PATH_SPLIT)
         self.assertTrue(root._del_group_object("/A/B/C"))
         with self.assertRaises(rados.ObjectNotFound):
-            self.iocxt.read("/A/B/C")
+            self.ioctx.read("/A/B/C")
         self.assertFalse(root._del_group_object("/A/B/C"))
 
         self.assertTrue(root._del_group_object("/A"))
         with self.assertRaises(rados.ObjectNotFound):
-            self.iocxt.read("/A")
+            self.ioctx.read("/A")
         self.assertFalse(root._del_group_object("/A"))
 
         self.assertTrue(root._del_group_object("/A/B"))
         with self.assertRaises(rados.ObjectNotFound):
-            self.iocxt.read("/A/B")
+            self.ioctx.read("/A/B")
         self.assertFalse(root._del_group_object("/A/B"))
