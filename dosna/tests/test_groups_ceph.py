@@ -226,3 +226,15 @@ class GroupTest(unittest.TestCase):
         A_get = root._get_group_object(name)
         self.assertEqual(type(A_get), CephGroup)
         self.check_group(A_get, name, name)
+
+    def test_get_links(self):
+        name = "/A"
+        root = self.connection_handle.get_group(PATH_SPLIT)
+        root.create_group(name)
+        root_link = CpuLink(CephLink("/", "/A", "/->/A"))
+        links = {"/A": root_link}
+        for link in links:
+            self.assertEqual(type(links[link]), type(root.get_links()[link]))
+            self.assertEqual(links[link].name, root.get_links()[link].name)
+            self.assertEqual(links[link].source, root.get_links()[link].source)
+            self.assertEqual(links[link].target, root.get_links()[link].target)
