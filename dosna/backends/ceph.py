@@ -60,7 +60,7 @@ class CephConnection(BackendConnection):
         self.ioctx.set_xattr(_PATH_SPLIT, "absolute_path", str(_PATH_SPLIT).encode(_ENCODING))
         self.ioctx.set_xattr(_PATH_SPLIT, "datasets", str({}).encode(_ENCODING))
         self.ioctx.set_xattr(_PATH_SPLIT, "links", str({}).encode(_ENCODING))
-        self.ioctx.set_xattr(_PATH_SPLIT, "parent", str({_PATH_SPLIT}).encode(_ENCODING))
+        self.ioctx.set_xattr(_PATH_SPLIT, "parent", str(_PATH_SPLIT).encode(_ENCODING))
 
     def _get_root_group(self,):
         name = self.ioctx.get_xattr(_PATH_SPLIT, "name").decode()
