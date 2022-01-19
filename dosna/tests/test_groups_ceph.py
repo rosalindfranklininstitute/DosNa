@@ -502,3 +502,21 @@ class GroupTest(unittest.TestCase):
         self.compare_datasets(root_data, A_data)
         # Returns false when no dataset or group with that name
         self.assertFalse(A.create_link("/D"))
+
+    def test_del_groups_with_datasets(self):
+        root = self.connection_handle.get_group(PATH_SPLIT)
+        groups = "/A/B/C"
+        C = root.create_group(groups)
+        A = root.get_group("/A")
+        data = np.random.randn(100, 100, 100)
+        C_dset = C.create_dataset("data", data=data)
+        A_dset = A.create_dataset("data", data=data)
+        root.del_group(A.name)
+        with self.assertRaises(rados.ObjectNotFound):
+            self.ioctx.read("/A/data")
+        with self.assertRaises(rados.ObjectNotFound):
+            self.ioctx.read("/A/B/C/data")
+        with self.assertRaises(rados.ObjectNotFound):
+            self.ioctx.read("/A/data/0.0.0")
+        with self.assertRaises(rados.ObjectNotFound):
+            self.ioctx.read("/A/B/C/data/0.0.0")
