@@ -445,6 +445,22 @@ class GroupTest(unittest.TestCase):
         for k1, k2 in zip(datasets, root.get_datasets()):
             self.assertEqual(k1, k2)
 
+    def test_del_dataset(self):
+        grp = "/A"
+        data = np.random.randn(100, 100, 100)
+        root = self.connection_handle.get_group(PATH_SPLIT)
+        A = root.create_group(grp)
+        data1 = root.create_dataset("data", data=data)
+        self.assertIn(data1.name, root.get_datasets())
+        with self.assertRaises(DatasetNotFoundError):
+            A.del_dataset(data1.name)
+        root.del_dataset(data1.name)
+        self.assertNotIn(data1.name, root.get_datasets())
+        datasets = str2dict(self.ioctx.get_xattr("/", "datasets").decode())
+        self.assertDictEqual({}, datasets)
+        with self.assertRaises(rados.ObjectNotFound):
+            self.ioctx.read(data1.name+"/0.0.0")
+
     def test_create_link2dataset(self):
         group_a = "/A"
         root = self.connection_handle.get_group(PATH_SPLIT)
