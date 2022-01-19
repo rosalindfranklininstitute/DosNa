@@ -292,8 +292,13 @@ class CephGroup(BackendGroup):
         return valid
 
 
-    def del_group(self, path):
-        if self.has_group(path):
+    def _del_group_object(self, path):
+        if self._has_group_object(path):
+            parent = self.ioctx.get_xattr(path, "parent").decode()
+            if self._has_group_object(parent):
+                links = str2dict(self.ioctx.get_xattr(parent, "links").decode())
+                del links[path]
+                self.ioctx.set_xattr(parent, "links", dict2str(links).encode(_ENCODING))
             self.ioctx.remove_object(path)
             return True
         return False
