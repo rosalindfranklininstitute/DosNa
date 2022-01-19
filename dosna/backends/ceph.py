@@ -365,12 +365,9 @@ class CephGroup(BackendGroup):
         return dataset
 
     def has_dataset(self, name):
-        try:
-            valid = self.ioctx.stat(name)[0] == len(_SIGNATURE.encode(_ENCODING)) and \
-                self.ioctx.read(name) == _SIGNATURE.encode(_ENCODING)
-        except rados.ObjectNotFound:
-            return False
-        return valid
+        if name in str2dict(self.ioctx.get_xattr(self.name, "datasets").decode()):
+            return True
+        return False
 
     def del_dataset(self, name):
         log.debug("Removing dataset %s", name)
