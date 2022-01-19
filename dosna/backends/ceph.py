@@ -64,11 +64,8 @@ class CephConnection(BackendConnection):
 
     def _get_root_group(self,):
         name = self.ioctx.get_xattr(_PATH_SPLIT, "name").decode()
-        attrs = str2dict(self.ioctx.get_xattr(name, 'attrs').decode())
         absolute_path = self.ioctx.get_xattr(name, "absolute_path").decode()
-        datasets = str2dict(self.ioctx.get_xattr(name, "datasets").decode())
-        group = CephGroup(self, name, attrs, links={}, absolute_path=absolute_path)
-        group.links = group.get_links(group)
+        group = CephGroup(self, name, absolute_path=absolute_path)
         return group
 
 
