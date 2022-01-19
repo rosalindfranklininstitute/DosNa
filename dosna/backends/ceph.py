@@ -303,6 +303,13 @@ class CephGroup(BackendGroup):
             return False
         return valid
 
+    def _has_group_object(self, name):
+        try:
+            valid = self.ioctx.stat(name)[0] == len(_SIGNATURE_GROUP.encode(_ENCODING)) and \
+                    self.ioctx.read(name) == _SIGNATURE_GROUP.encode(_ENCODING)
+        except rados.ObjectNotFound:
+            return False
+        return valid
 
     def _del_group_object(self, path):
         if self._has_group_object(path):
