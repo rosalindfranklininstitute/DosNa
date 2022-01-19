@@ -63,7 +63,6 @@ class CpuConnection(EngineConnection):
         return None
 
 
-    
 class CpuGroup(EngineGroup):
     
     def create_group(self, name, attrs={}):
@@ -74,6 +73,12 @@ class CpuGroup(EngineGroup):
     def get_group(self, name):
         group = self.instance.get_group(name)
         return CpuGroup(group)
+
+    def get_links(self):
+        links = self.instance.get_links()
+        for key in links:
+            links[key] = CpuLink(links[key])
+        return links
 
     def create_dataset(self, name, shape=None, dtype=np.float32, fillvalue=0,
                        data=None, chunk_size=None):
@@ -87,6 +92,12 @@ class CpuGroup(EngineGroup):
     def get_dataset(self, name):
         dataset = self.instance.get_dataset(name)
         return CpuDataset(dataset)
+
+    def get_datasets(self):
+        datasets = self.instance.get_datasets()
+        for key, value in datasets.items():
+            datasets[key] = CpuDataset(self.instance.get_dataset(key))
+        return datasets
 
     def get_object(self, name):
         try:
