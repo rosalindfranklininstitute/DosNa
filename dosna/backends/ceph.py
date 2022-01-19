@@ -322,19 +322,30 @@ class CephGroup(BackendGroup):
             return True
         return False
 
-    def get_links(self, group):
-        links = str2dict(self.ioctx.get_xattr(self.name, "links").decode())
-        for key, value in links.items():
-            path = value["name"]
-            source = value["source"]
-            if source == self.name:
-                source = self
-            else:
-                source = self.get_group(source)
-            target = value["target"]
-            target = self.get_group(target)
-            links[key] = CephLink(source, target, path)
-        return links
+    def del_group(self, path, root=None):
+        def del_sub_group(node, root, datasets):
+            links = node.get_links()
+            for link in links:
+                node = self._get_group_object(link)
+                del_sub_group(node, root, datasets)
+                if node.absolute_path[:len(root.absolute_path)+1] == root.name + root.path_split:
+                    if node.get_datasets() is not {}:
+                        for data in node.get_datasets():
+                            if data[:len(node.name)+1] == node.name+self.path_split:
+                                datasets.append(data)
+                    root._del_group_object(node.name)
+
+        if self.has_group(path):
+            datasets = []
+            root = self._get_group_object(path)
+            del_sub_group(root, root, datasets)
+            if root.get_datasets() is not {}:
+                for key in root.get_datasets():
+                    if key[:len(root.name) + 1] == root.name + self.path_split:
+                        datasets.append(key)
+            self._del_group_object(path)
+            return datasets
+        raise GroupNotFoundError(path)
 
     def create_dataset(self, name, shape=None, dtype=np.float32, fillvalue=0,
                        data=None, chunk_size=None):
