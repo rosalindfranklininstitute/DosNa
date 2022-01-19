@@ -1,12 +1,12 @@
 import time
 import unittest
-
 import rados
 
 import numpy as np
 from numpy.testing import assert_array_equal
 
 import dosna as dn
+from dosna.util import str2dict
 from dosna.engines.cpu import CpuGroup, CpuLink, CpuDataset
 from dosna.backends.ceph import CephGroup, CephLink
 from dosna.backends.base import (
@@ -14,7 +14,7 @@ from dosna.backends.base import (
     GroupNotFoundError,
     GroupExistsError, DatasetExistsError,
 )
-from dosna.util import str2dict
+
 
 _SIGNATURE = "DosNa Dataset"
 _SIGNATURE_GROUP = "DosNa Group"
@@ -25,10 +25,8 @@ PATH_SPLIT = "/"
 
 class GroupTest(unittest.TestCase):
     """
-    Test dataset actions
+    Test DosNa Groups with Ceph Backend
     """
-
-    connection_handle = None
 
     @classmethod
     def setUpClass(cls):
@@ -75,7 +73,6 @@ class GroupTest(unittest.TestCase):
         self.assertIsNone(np.testing.assert_array_equal(dset1.chunk_grid, dset2.chunk_grid))
         self.assertIsNone(assert_array_equal(dset1[:], dset2[:]))
 
-
     def test_root_group_exists(self):
         self.assertEqual(_SIGNATURE_GROUP, str(self.ioctx.read(PATH_SPLIT).decode()))
 
@@ -118,7 +115,6 @@ class GroupTest(unittest.TestCase):
         self.connection_handle.create_group(group_name)
         with self.assertRaises(GroupExistsError):
             group_obj = self.connection_handle.create_group(group_name)
-
 
     def test_create_group_with_attrs(self):
         root = self.connection_handle.get_group(PATH_SPLIT)
@@ -247,7 +243,6 @@ class GroupTest(unittest.TestCase):
         self.assertEqual(type(B), CpuGroup)
         self.check_group(B, "/A/B", "/A/A/B")
 
-
     def test_get_group_object(self):
         name = "/A"
         root = self.connection_handle.get_group(PATH_SPLIT)
@@ -259,8 +254,6 @@ class GroupTest(unittest.TestCase):
         self.check_group(A_get, name, name)
         with self.assertRaises(GroupNotFoundError):  # TODO: Is this check required?
             root._get_group_object("/B")
-
-
 
     def test_get_links(self):
         name = "/A"
@@ -316,7 +309,7 @@ class GroupTest(unittest.TestCase):
         root = self.connection_handle.get_group(PATH_SPLIT)
         group_name = "/FakeGroup"
         attrs = {"A1": "V1"}
-        group_obj = self.connection_handle.create_group(group_name, attrs)
+        group_obj = root.create_group(group_name, attrs)
         self.assertEqual(type(group_obj), CpuGroup)
         self.check_group(group_obj, group_name, group_name)
         self.assertEqual(group_obj.get_attrs(), attrs)
