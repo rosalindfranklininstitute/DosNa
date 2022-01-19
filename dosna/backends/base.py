@@ -87,10 +87,9 @@ class BackendConnection(object):
         
 class BackendGroup(object):
     
-    def __init__(self, parent, name, attrs, *args, **kwargs):
+    def __init__(self, parent, name, *args, **kwargs):
         self._parent = parent
         self._name = name
-        self._attrs = attrs
 
     @property
     def name(self):
