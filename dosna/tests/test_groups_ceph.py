@@ -278,6 +278,26 @@ class GroupTest(unittest.TestCase):
         with self.assertRaises(GroupNotFoundError):
             B.get_group("/A")
 
+    def test_get_link2_del_group(self):
+        group_a = "/A"
+        group_b = "/B"
+        root = self.connection_handle.get_group(PATH_SPLIT)
+        root.create_group(group_a)
+        root.create_group(group_b)
+        A = root.get_group(group_a)
+        root.get_group(group_b)
+        self.assertNotIn(group_b, A.get_links())
+        A.create_link(group_b)
+        self.assertIn(group_b, A.get_links())
+        A.del_group("/B")
+        self.assertEqual(A.get_links()["/B"].target, None)
+        with self.assertRaises(GroupNotFoundError):
+            A.get_group("/B")
+        # Adding "/B" back link should be maintained
+        root.create_group(group_b)
+        B = root.get_group(group_b)
+        self.assertEqual(A.get_group("/B").name, B.name)
+
     def test_get_attrs(self):
         root = self.connection_handle.get_group(PATH_SPLIT)
         group_name = "/FakeGroup"
