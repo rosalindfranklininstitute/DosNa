@@ -64,7 +64,7 @@ class CpuConnection(EngineConnection):
 
 
 class CpuGroup(EngineGroup):
-    
+
     def create_group(self, name, attrs={}):
         group = self.instance.create_group(name, attrs)
         engine_group = CpuGroup(group)
@@ -126,13 +126,14 @@ class CpuGroup(EngineGroup):
         dataset.clear()
         self.instance._del_dataset_object(name)
 
+
 class CpuLink(EngineLink):
-    
+
     def get_source(self):
-        return self.instance.get_source()
+        return CpuGroup(self.instance.get_source())
     
     def get_target(self):
-        return self.instance.get_target()
+        return CpuGroup(self.instance.get_target())
     
     def get_name(self):
         return self.instance.get_name()
