@@ -350,6 +350,19 @@ class CephGroup(BackendGroup):
     def get_attrs(self):
         return str2dict(self.ioctx.get_xattr(self.name, "attrs").decode())
 
+    def get_links(self):
+        links = str2dict(self.ioctx.get_xattr(self.name, "links").decode())
+        for key, value in links.items():
+            path = value["name"]
+            source = value["source"]
+            target = value["target"]
+            if self.has_group(value["target"]):
+                links[key] = CephLink(source, target, path)
+            else:
+                target = None
+                links[key] = CephLink(source, target, path)
+        return links
+
     def create_dataset(self, name, shape=None, dtype=np.float32, fillvalue=0,
                        data=None, chunk_size=None):
         if not ((shape is not None and dtype is not None) or data is not None):
