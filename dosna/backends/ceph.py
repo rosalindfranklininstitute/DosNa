@@ -387,6 +387,11 @@ class CephGroup(BackendGroup):
             return True
         return False
 
+    def get_dataset(self, name):
+        if not self.has_dataset(name):
+            raise DatasetNotFoundError('Dataset `%s` does not exist' % name)
+        return self._dataset(name)
+
     def del_dataset(self, name):
         log.debug("Removing dataset %s", name)
         if self.has_dataset(name):
