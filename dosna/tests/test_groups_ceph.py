@@ -480,6 +480,10 @@ class GroupTest(unittest.TestCase):
             self.ioctx.read(data1.name)
         self.ioctx.read(data1.name + "/0.0.0")
 
+        # Delete none existent group
+        with self.assertRaises(DatasetNotFoundError):
+            A._del_dataset_object("/B")
+
     def test_create_link2dataset(self):
         group_a = "/A"
         root = self.connection_handle.get_group(PATH_SPLIT)
