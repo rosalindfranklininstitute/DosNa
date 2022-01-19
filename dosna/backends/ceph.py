@@ -267,9 +267,8 @@ class CephGroup(BackendGroup):
         self.ioctx.set_xattr(path, "datasets", str({}).encode(_ENCODING))
         self.ioctx.set_xattr(path, "links", str({}).encode(_ENCODING))
         self.ioctx.set_xattr(path, "parent", str(self.name).encode(_ENCODING))
-        group = CephGroup(self, path, attrs, datasets={}, links={},absolute_path=absolute_path)
-        link = self.create_link(path)
-        self.links[path] = link
+        group = CephGroup(self, path, absolute_path)
+        self.create_link(path)
         return group
 
     def get_group(self, path):
