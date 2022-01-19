@@ -428,8 +428,30 @@ class BackendDataChunk(object):
 class ConnectionError(Exception):
     pass
 
+
+class DatasetExistsError(Exception):
+    def __init__(self, dataset):
+        self.dataset = dataset
+        self.message = "Dataset " + self.dataset + " already exists"
+        super().__init__(self.message)
+
+
 class DatasetNotFoundError(Exception):
-    pass
+    def __init__(self, dataset):
+        self.dataset = dataset
+        self.message = "Dataset " + self.dataset + " Not Found"
+        super().__init__(self.message)
+
+
+class GroupExistsError(Exception):
+    def __init__(self, group):
+        self.group = group
+        self.message = "Group " + self.group + " already exists"
+        super().__init__(self.message)
+
 
 class GroupNotFoundError(Exception):
-    pass
+    def __init__(self, group):
+        self.group = group
+        self.message = "Group " + self.group + " does not exist"
+        super().__init__(self.message)
