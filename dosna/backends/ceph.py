@@ -386,10 +386,7 @@ class CephGroup(BackendGroup):
         self.ioctx.set_xattr(self.name, "datasets", dict2str(datasets).encode(_ENCODING))
         return dataset
 
-    def get_dataset(self, name):
-        if not self.has_dataset(name):
-            raise DatasetNotFoundError('Dataset `%s` does not exist' % name)
-
+    def _get_dataset(self, name):
         shape = str2shape(self.ioctx.get_xattr(name, 'shape').decode())
         dtype = self.ioctx.get_xattr(name, 'dtype').decode()
         fillvalue = int(self.ioctx.get_xattr(name, 'fillvalue').decode())
@@ -411,7 +408,7 @@ class CephGroup(BackendGroup):
     def get_dataset(self, name):
         if not self.has_dataset(name):
             raise DatasetNotFoundError('Dataset `%s` does not exist' % name)
-        return self._dataset(name)
+        return self._get_dataset(name)
 
     def del_dataset(self, name):
         log.debug("Removing dataset %s", name)
@@ -427,7 +424,7 @@ class CephGroup(BackendGroup):
     def _get_dataset_object(self, name):
         if not self._has_dataset_object(name):
             raise DatasetNotFoundError('Dataset `%s` does not exist' % name)
-        return self._dataset(name)
+        return self._get_dataset(name)
 
     def _has_dataset_object(self, name):
         try:
