@@ -178,17 +178,12 @@ class CephLink(BackendLink):
 
 
 class CephGroup(BackendGroup):
-    def __init__(self, parent, name, attrs={}, datasets={}, links={}, absolute_path=None, path_split="/", *args, **kwargs):
-        super(CephGroup, self).__init__(parent, name, attrs)
-        self.attrs = attrs
-        self.links = links
-        self.datasets = datasets
+    def __init__(self, parent, name, absolute_path, path_split="/"):
+        super(CephGroup, self).__init__(parent, name)
         self.path_split = path_split
-        if self.name != self.path_split:
-            self.absolute_path = absolute_path
-        else:
-            self.absolute_path = self.name
-        self.visited = {}
+        self.absolute_path = absolute_path
+
+
     @property
     def ioctx(self):
         return self.parent.ioctx
