@@ -212,30 +212,29 @@ class CephGroup(BackendGroup):
 
     def create_group(self, path, attrs={}):
 
-        def _create_subgroups(path, group, attrs={}):
-            path.pop(0)
-            if len(path) == 0:
-                return False
-            elif len(path) == 1:
-                subgroup = group.create_object(path[0], attrs)
-            else:
-                subgroup = group.create_object(path[0])
-            link = group.create_link(path[0])
-            group.links[path[0]] = link
-
-            if len(path) == 0:
-                return False
-            _create_subgroups(path, subgroup, attrs)
-
-        if self.path_split in path:
+        def _create_subgroup(path, group, attrs={}):
             path_elements = path.split(self.path_split)
-            group = _create_subgroups(path_elements, self, attrs)
+            for i in range(len(path_elements)-2, 0, -1):
+                parent = "/".join(path_elements[:-i])
+                if group.name == parent:
+                    group = group
+                elif group.has_group(parent):
+                    group = group._get_group_object(parent)
+                else:
+                    group = group._create_group_object(parent)
+            group = group._create_group_object(path, attrs)
+            return group
 
-        else:
-            group = self.create_object(path, attrs)
+        if path[0] != "/":
+            path = "/" + path
+        if self.name != self.path_split:
+            path = self.name + path
+        if self.has_group(path):
+            raise GroupExistsError(path)
+        group = _create_subgroup(path, self, attrs)
         return group
 
-    def create_link(self, path):
+    def _create_group_link(self, path):
         links = str2dict(self.ioctx.get_xattr(self.name,"links").decode())
         link_name = self.name + "->" + path
         links[path] = {"name": link_name,
