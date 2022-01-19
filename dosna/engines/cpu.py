@@ -56,6 +56,12 @@ class CpuConnection(EngineConnection):
         except:
             pass
 
+    def del_group(self, name):
+        datasets = self.instance.del_group(name)
+        for dset in datasets:
+            self.del_dataset(dset)
+        return None
+
 
     
 class CpuGroup(EngineGroup):
@@ -94,6 +100,20 @@ class CpuGroup(EngineGroup):
         except:
             pass
 
+    def del_group(self, name):
+        datasets = self.instance.del_group(name)
+        for dset in datasets:
+            self.del_dataset_object(dset)
+        return None
+
+    def get_dataset_object(self, name):
+        dataset = self.instance._get_dataset_object(name)
+        return CpuDataset(dataset)
+
+    def del_dataset_object(self, name):
+        dataset = self.get_dataset_object(name)
+        dataset.clear()
+        self.instance._del_dataset_object(name)
 
 class CpuLink(EngineLink):
     
