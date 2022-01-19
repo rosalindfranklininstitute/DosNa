@@ -347,6 +347,9 @@ class CephGroup(BackendGroup):
             return datasets
         raise GroupNotFoundError(path)
 
+    def get_attrs(self):
+        return str2dict(self.ioctx.get_xattr(self.name, "attrs").decode())
+
     def create_dataset(self, name, shape=None, dtype=np.float32, fillvalue=0,
                        data=None, chunk_size=None):
         if not ((shape is not None and dtype is not None) or data is not None):
