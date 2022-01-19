@@ -387,6 +387,10 @@ class CephGroup(BackendGroup):
             return True
         return False
 
+    def get_datasets(self):
+        datasets = str2dict(self.ioctx.get_xattr(self.name, "datasets").decode())
+        return datasets
+
     def get_dataset(self, name):
         if not self.has_dataset(name):
             raise DatasetNotFoundError('Dataset `%s` does not exist' % name)
