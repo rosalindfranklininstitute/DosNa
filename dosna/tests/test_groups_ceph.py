@@ -364,6 +364,31 @@ class GroupTest(unittest.TestCase):
         self.assertTrue(root.has_dataset("/data"))
         self.assertFalse(A.has_dataset("/data"))
 
+    def test_get_dataset_object(self):
+        grp = "/A"
+        data = np.random.randn(100, 100, 100)
+        root = self.connection_handle.get_group(PATH_SPLIT)
+        A = root.create_group(grp)
+        chunk_grid = (32, 32, 32)
+        data1 = root.create_dataset("data", data=data, chunk_size=chunk_grid)
+        path = root.name + "data"
+        root_data = root._get_dataset_object(path)
+        self.assertEqual(root_data.name, path)
+        self.assertEqual(root_data.chunk_size, chunk_grid)
+        for i in range(0, root_data.total_chunks):
+            idx = root_data._idx_from_flat(i)
+            self.assertIsNone(assert_array_equal(data1.get_chunk_data(idx), root_data.get_chunk_data(idx)))
+        # Accessed from any group
+        A_data = A._get_dataset_object(path)
+        self.assertEqual(A_data.name, path)
+        self.assertEqual(A_data.chunk_size, chunk_grid)
+        for i in range(0, A_data.total_chunks):
+            idx = A_data._idx_from_flat(i)
+            self.assertIsNone(assert_array_equal(data1.get_chunk_data(idx), A_data.get_chunk_data(idx)))
+
+        with self.assertRaises(DatasetNotFoundError):
+            A._get_dataset_object("/B")
+
     def test_get_dataset(self):
         grp = "/A"
         data = np.random.randn(100, 100, 100)
