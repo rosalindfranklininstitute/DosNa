@@ -280,46 +280,13 @@ class CephGroup(BackendGroup):
         self.visited = {}
         return group
 
-    def get_object(self, name):
-        if self.has_group(name) and (name not in self.visited):
+    def _get_group_object(self, name):
+        if self._has_group_object(name):
             name = self.ioctx.get_xattr(name, "name").decode()
-            attrs = str2dict(self.ioctx.get_xattr(name, 'attrs').decode())
             absolute_path = self.ioctx.get_xattr(name, "absolute_path").decode()
-            datasets = str2dict(self.ioctx.get_xattr(name, "datasets").decode())
-            links = str2dict(self.ioctx.get_xattr(name, "links").decode())
-            parent = self.ioctx.get_xattr(name, "parent").decode()
-            if parent == self.name:
-                parent = self
-            else:
-                parent = self.get_object(parent)
-            datasets = str2dict(self.ioctx.get_xattr(name, "datasets").decode())
-            dataset = {}
-            for key, value in datasets.items():
-                dataset[key] = self.get_dataset(value["name"])
-            group = CephGroup(parent, name, attrs, datasets=dataset, links={}, absolute_path=absolute_path,
-                              path_split="/")
-            self.visited[group.name] = group
-            links = str2dict(self.ioctx.get_xattr(name, "links").decode())
-            for key, value in links.items():
-                if value["source"] == name:
-                    source = group
-                elif value["source"] in self.visited:
-                    source = self.visited[value["source"]]
-                else:
-                    source = self.get_object(value["source"])
-                if value["target"] == name:
-                    target = group
-                elif value["target"] in self.visited:
-                    target = self.visited[value["target"]]
-                else:
-                    target = self.get_object(value["target"])
-                if target is None:
-                    group.links[key] = CephLink(source, target, source.name + "->" + str(target))
-                    self.visited[group.name] = group
-                    self.visited[name]
-                group.links[key] = CephLink(source, target, source.name + "->" + target.name)
-                self.visited[group.name] = group
-        return self.visited[name]
+            group = CephGroup(self, name, absolute_path, path_split="/")
+            return group
+        raise GroupNotFoundError(name)
 
     def has_group(self, name):
         try:
