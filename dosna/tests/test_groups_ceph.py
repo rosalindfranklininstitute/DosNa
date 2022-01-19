@@ -373,6 +373,7 @@ class GroupTest(unittest.TestCase):
         data1 = root.create_dataset("data", data=data, chunk_size=chunk_grid)
         path = root.name + "data"
         root_data = root.get_dataset(path)
+        self.assertEqual(type(root_data), CpuDataset)
         # Compare data with got
         self.assertIsNone(assert_array_equal(data, root_data[:]))
         self.assertEqual(root_data.name, path)
