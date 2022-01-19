@@ -332,3 +332,10 @@ class GroupTest(unittest.TestCase):
         A.create_dataset(data_path, data=data)
         self.assertEqual(_SIGNATURE, str(self.ioctx.read(data_path).decode()))
 
+    def test__has_dataset_object(self):
+        data = np.random.randn(100, 100, 100)
+        root = self.connection_handle.get_group(PATH_SPLIT)
+        root.create_dataset("data", data=data, chunk_size=(32, 32, 32))
+        path = root.name + "data"
+        self.assertTrue(root._has_dataset_object(path))
+        self.assertFalse(root._has_dataset_object("/B"))
