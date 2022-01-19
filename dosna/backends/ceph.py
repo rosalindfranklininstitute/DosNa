@@ -1,15 +1,14 @@
 #!/usr/bin/env python
 """Backend ceph uses a ceph cluster to store the dataset and chunks data"""
-
 import logging
+import rados
 
 import numpy as np
 
-import rados
 from dosna.backends import Backend
 from dosna.backends.base import (BackendConnection, BackendDataChunk,
                                  BackendDataset, BackendGroup, BackendLink, ConnectionError,
-                                 DatasetNotFoundError)
+                                 DatasetNotFoundError, GroupNotFoundError, GroupExistsError, DatasetExistsError)
 from dosna.util import dtype2str, shape2str, str2shape, str2dict, dict2str
 from dosna.util.data import slices2shape
 _PATH_SPLIT = '/'
@@ -48,10 +47,9 @@ class CephConnection(BackendConnection):
         self._cluster.connect(timeout=self._timeout)
         self._ioctx = self._cluster.open_ioctx(self.name)
         super(CephConnection, self).connect()
-        if self.has_group(_PATH_SPLIT) == False:
+        if self.has_group_object(_PATH_SPLIT) == False:
             self.create_root_group()
         self.root_group = self.get_group(_PATH_SPLIT)
-
 
     def create_root_group(self):
         self.ioctx.write(_PATH_SPLIT, _SIGNATURE_GROUP.encode(_ENCODING))
@@ -67,7 +65,6 @@ class CephConnection(BackendConnection):
         absolute_path = self.ioctx.get_xattr(name, "absolute_path").decode()
         group = CephGroup(self, name, absolute_path=absolute_path)
         return group
-
 
     def disconnect(self):
         if self.connected:
@@ -87,7 +84,7 @@ class CephConnection(BackendConnection):
             return self._get_root_group()
         return self.root_group.get_group(name)
 
-    def has_group(self, name):
+    def has_group_object(self, name):
         try:
             valid = self.ioctx.stat(name)[0] == len(_SIGNATURE_GROUP.encode(_ENCODING)) and \
                     self.ioctx.read(name) == _SIGNATURE_GROUP.encode(_ENCODING)
