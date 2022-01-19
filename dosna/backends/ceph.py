@@ -364,9 +364,8 @@ class CephGroup(BackendGroup):
                               chunk_grid, chunk_size)
         datasets = str2dict(self.ioctx.get_xattr(self.name, "datasets").decode())
         dataset_name = name
-        datasets[dataset_name] = {"name": dataset_name}
+        datasets[dataset_name] = dataset_name
         self.ioctx.set_xattr(self.name, "datasets", dict2str(datasets).encode(_ENCODING))
-        self.datasets[dataset_name] = dataset
         return dataset
 
     def get_dataset(self, name):
