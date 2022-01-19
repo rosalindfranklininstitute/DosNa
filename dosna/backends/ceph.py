@@ -80,10 +80,7 @@ class CephConnection(BackendConnection):
         return self._ioctx
 
     def create_group(self, path, attrs={}):
-        if path == _PATH_SPLIT:
-            raise Exception('Group: ', path, 'already exists')
-        else:
-            return self.root_group.create_group(path, attrs)
+        return self.root_group.create_group(path, attrs)
 
     def get_group(self, name):
         if name == _PATH_SPLIT:
