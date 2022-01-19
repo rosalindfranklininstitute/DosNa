@@ -260,6 +260,24 @@ class GroupTest(unittest.TestCase):
             self.assertEqual(links[link].source, root.get_links()[link].source)
             self.assertEqual(links[link].target, root.get_links()[link].target)
 
+    def test_create_link2grp(self):
+        group_a = "/A"
+        group_b = "/B"
+        root = self.connection_handle.get_group(PATH_SPLIT)
+        root.create_group(group_a)
+        root.create_group(group_b)
+        A = root.get_group(group_a)
+        B = root.get_group(group_b)
+        self.assertNotIn(group_b, A.get_links())
+        A.create_link(group_b)
+        self.assertIn(group_b, A.get_links())
+        B_through_A = A.get_group("/B")
+        self.assertEqual(type(B_through_A), CpuGroup)
+        self.assertEqual(B.name, B_through_A.name)
+        self.assertEqual(B.absolute_path, B_through_A.absolute_path)
+        with self.assertRaises(GroupNotFoundError):
+            B.get_group("/A")
+
     def test_get_attrs(self):
         root = self.connection_handle.get_group(PATH_SPLIT)
         group_name = "/FakeGroup"
