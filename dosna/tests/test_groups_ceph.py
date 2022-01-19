@@ -415,3 +415,29 @@ class GroupTest(unittest.TestCase):
         # Check A can't get the dataset as it's not linked
         with self.assertRaises(DatasetNotFoundError):
             A.get_dataset(path)
+
+    def test_create_link2dataset(self):
+        group_a = "/A"
+        root = self.connection_handle.get_group(PATH_SPLIT)
+        A = root.create_group(group_a)
+        data = np.random.randn(100, 100, 100)
+        root = self.connection_handle.get_group(PATH_SPLIT)
+        chunk_grid = (32, 32, 32)
+        root.create_dataset("data", data=data, chunk_size=chunk_grid)
+        dset_path = "/data"
+        with self.assertRaises(DatasetNotFoundError):
+            A.get_dataset(dset_path)
+
+        self.assertTrue(A.create_link(dset_path))
+        A_data = A.get_dataset(dset_path)
+        root_data = root.get_dataset(dset_path)
+        self.assertEqual(A_data.name, root_data.name)
+        self.assertEqual(A_data.shape, root_data.shape)
+        self.assertEqual(A_data.dtype, root_data.dtype)
+        self.assertEqual(A_data.ndim, root_data.ndim)
+        self.assertEqual(A_data.fillvalue, root_data.fillvalue)
+        self.assertEqual(A_data.chunk_size, root_data.chunk_size)
+        self.assertIsNone(np.testing.assert_array_equal(A_data.chunk_grid, root_data.chunk_grid))
+        self.assertIsNone(assert_array_equal(A_data[:], root_data[:]))
+        # Returns false when no dataset or group with that name
+        self.assertFalse(A.create_link("/D"))
