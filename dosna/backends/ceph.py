@@ -334,8 +334,13 @@ class CephGroup(BackendGroup):
                        data=None, chunk_size=None):
         if not ((shape is not None and dtype is not None) or data is not None):
             raise Exception('Provide `shape` and `dtype` or `data`')
-        if self.has_dataset(name):
-            raise Exception('Dataset `%s` already exists' % name)
+        if self.name == self.path_split:
+            if name[0] != self.path_split:
+                name = self.name + name
+        elif name[:len(self.name) + 1] != self.name + self.path_split:
+            name = self.name + self.path_split + name
+        if self._has_dataset_object(name):
+            raise DatasetExistsError(name)
 
         if data is not None:
             shape = data.shape
