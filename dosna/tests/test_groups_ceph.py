@@ -2,7 +2,7 @@ import time
 import rados
 import dosna as dn
 import unittest
-
+import numpy as np
 from dosna.engines.cpu import CpuGroup, CpuLink
 from dosna.backends.ceph import CephGroup, CephLink
 
@@ -10,7 +10,7 @@ from dosna.util import str2dict
 from dosna.backends.base import (
     DatasetNotFoundError,
     GroupNotFoundError,
-    GroupExistsError,
+    GroupExistsError, DatasetExistsError,
 )
 _SIGNATURE = "DosNa Dataset"
 _SIGNATURE_GROUP = "DosNa Group"
@@ -307,4 +307,28 @@ class GroupTest(unittest.TestCase):
         self.check_group(group_obj, group_name, group_name)
         self.assertEqual(group_obj.get_attrs(), attrs)
 
+    def test_group_create_dataset(self):
+        grp = "/A"
+        data = np.random.randn(100, 100, 100)
+        root = self.connection_handle.get_group(PATH_SPLIT)
+        root.create_dataset("data", data=data, chunk_size=(32, 32, 32))
+
+        path = root.name + "data"
+        self.assertEqual(_SIGNATURE, str(self.ioctx.read(path).decode()))
+        data_path = "/dset1"
+        root.create_dataset(data_path, data=data)
+        self.assertEqual(_SIGNATURE, str(self.ioctx.read(data_path).decode()))
+
+        A = root.create_group(grp)
+        A.create_dataset("data", data=data)
+        path = A.name + PATH_SPLIT + "data"
+        self.assertEqual(_SIGNATURE, str(self.ioctx.read(path).decode()))
+        with self.assertRaises(DatasetExistsError):
+            A.create_dataset("data", data=data)
+        with self.assertRaises(Exception):
+            A.create_dataset("data")
+
+        data_path = "/A/dset1"
+        A.create_dataset(data_path, data=data)
+        self.assertEqual(_SIGNATURE, str(self.ioctx.read(data_path).decode()))
 
