@@ -427,6 +427,24 @@ class GroupTest(unittest.TestCase):
         with self.assertRaises(DatasetNotFoundError):
             A.get_dataset(path)
 
+    def test_get_datasets(self):
+        grp = "/A"
+        data = np.random.randn(100, 100, 100)
+        root = self.connection_handle.get_group(PATH_SPLIT)
+        A = root.create_group(grp)
+        chunk_grid = (32, 32, 32)
+        self.assertDictEqual({}, A.get_datasets())
+        self.assertDictEqual({}, root.get_datasets())
+        self.assertNotIn("/data", root.get_datasets())
+        data1 = root.create_dataset("data", data=data, chunk_size=chunk_grid)
+        self.assertIn(data1.name, root.get_datasets())
+        self.assertNotIn(data1.name, A.get_datasets())
+        self.assertEqual(type(root.get_datasets()[data1.name]), CpuDataset)
+        self.compare_datasets(data1, root.get_datasets()[data1.name])
+        datasets = str2dict(self.ioctx.get_xattr("/", "datasets").decode())
+        for k1, k2 in zip(datasets, root.get_datasets()):
+            self.assertEqual(k1, k2)
+
     def test_create_link2dataset(self):
         group_a = "/A"
         root = self.connection_handle.get_group(PATH_SPLIT)
