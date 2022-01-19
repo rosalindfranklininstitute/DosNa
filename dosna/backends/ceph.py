@@ -242,9 +242,22 @@ class CephGroup(BackendGroup):
                        "source": self.name,
                        "target": path}
         self.ioctx.set_xattr(self.name, "links", dict2str(links).encode(_ENCODING))
-        return CephLink(self, path, link_name)
 
-    def create_object(self, path, attrs={}):
+    def _create_dataset_link(self, path):
+        datasets = str2dict(self.ioctx.get_xattr(self.name, "datasets").decode())
+        datasets[path] = path
+        self.ioctx.set_xattr(self.name, "datasets", dict2str(datasets).encode(_ENCODING))
+
+    def create_link(self, path):
+        if self._has_group_object(path):
+            self._create_group_link(path)
+            return True
+        elif self._has_dataset_object(path):
+            self._create_dataset_link(path)
+            return True
+        return False
+
+    def _create_group_object(self, path, attrs={}):
         attrs = {str(key): str(value) for key, value in attrs.items()}
         absolute_path = self.create_absolute_path(path)
         self.ioctx.write(path, _SIGNATURE_GROUP.encode(_ENCODING))
