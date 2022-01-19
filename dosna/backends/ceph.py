@@ -98,9 +98,8 @@ class CephConnection(BackendConnection):
             return False
         return valid
 
-    def del_group(self):
-        raise NotImplementedError('`del_group` not implemented '
-                                  'for this backend')
+    def del_group(self, path):
+        return self.root_group.del_group(path)
 
     def create_dataset(self, name, shape=None, dtype=np.float32, fillvalue=0,
                        data=None, chunk_size=None):
