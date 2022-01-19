@@ -339,3 +339,14 @@ class GroupTest(unittest.TestCase):
         path = root.name + "data"
         self.assertTrue(root._has_dataset_object(path))
         self.assertFalse(root._has_dataset_object("/B"))
+
+    def test_has_dataset(self):
+        grp = "/A"
+        root = self.connection_handle.get_group(PATH_SPLIT)
+        A = root.create_group(grp)
+
+        data = np.random.randn(100, 100, 100)
+        root.create_dataset("data", data=data, chunk_size=(32, 32, 32))
+
+        self.assertTrue(root.has_dataset("/data"))
+        self.assertFalse(A.has_dataset("/data"))
