@@ -424,14 +424,27 @@ class CephGroup(BackendGroup):
             raise DatasetNotFoundError(
                 'Dataset `{}` does not exist'.format(name))
 
-    def deserialise_link(self, links):
-        link = {}
-        for key, value in links.items():
-            path = value["name"]
-            source = value["source"]
-            target = value["target"]
-            link[key] = CephLink(source, target, path)
-        return link
+    def _get_dataset_object(self, name):
+        if not self._has_dataset_object(name):
+            raise DatasetNotFoundError('Dataset `%s` does not exist' % name)
+        return self._dataset(name)
+
+    def _has_dataset_object(self, name):
+        try:
+            valid = self.ioctx.stat(name)[0] == len(_SIGNATURE.encode(_ENCODING)) and \
+                self.ioctx.read(name) == _SIGNATURE.encode(_ENCODING)
+        except rados.ObjectNotFound:
+            return False
+        return valid
+
+    def _del_dataset_object(self, name):
+        log.debug("Removing dataset %s", name)
+        if self._has_dataset_object(name):
+            self.ioctx.remove_object(name)
+        else:
+            raise DatasetNotFoundError(
+                'Dataset `{}` does not exist'.format(name))
+
 
 class CephDataset(BackendDataset):
     """
