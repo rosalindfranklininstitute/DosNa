@@ -260,24 +260,19 @@ class CephGroup(BackendGroup):
         return group
 
     def get_group(self, path):
-        def _find_group(path, links):
-            first_element = path[0]
-            if first_element in links:
-                object_link = links.get(first_element).target
-                if len(path) > 1:
-                    path.pop(0)
-                    object_link = self.deserialise_link(str2dict(self.ioctx.get_xattr(object_link, "links").decode()))
-                    return _find_group(path, object_link)
-                else:
-                    if self.has_group(object_link):
-                        group = self.get_object(object_link)
-                        return group
+        def _find_group(path):
+            group = self
+            for i in range(1, len(path)+1):
+                links = group.get_links()
+                link_path = self.path_split.join(path[:i])
+                if link_path in links:
+                    group = group._get_group_object(link_path)
+            return group
+
         path_elements = path.split(self.path_split)
-        if path.startswith(self.path_split):
-            path_elements.pop(0)
-        links = self.deserialise_link(str2dict(self.ioctx.get_xattr(self.name, "links").decode()))
-        group = _find_group(path_elements, links)
-        self.visited = {}
+        group = _find_group(path_elements)
+        if group == self or group.name != path:
+            raise GroupNotFoundError(path)
         return group
 
     def _get_group_object(self, name):
