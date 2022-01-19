@@ -110,7 +110,7 @@ class CephConnection(BackendConnection):
         if not ((shape is not None and dtype is not None) or data is not None):
             raise Exception('Provide `shape` and `dtype` or `data`')
         if self.has_dataset(name):
-            raise Exception('Dataset `%s` already exists' % name)
+            raise DatasetExistsError(name)
 
         if data is not None:
             shape = data.shape
