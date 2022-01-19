@@ -14,6 +14,7 @@ from dosna.backends.base import (
     GroupNotFoundError,
     GroupExistsError, DatasetExistsError,
 )
+from dosna.util import str2dict
 
 _SIGNATURE = "DosNa Dataset"
 _SIGNATURE_GROUP = "DosNa Group"
@@ -63,6 +64,16 @@ class GroupTest(unittest.TestCase):
             group.absolute_path, str(self.ioctx.get_xattr(name, "absolute_path").decode())
         )
         self.assertEqual(group.absolute_path, absolute_path)
+
+    def compare_datasets(self, dset1, dset2):
+        self.assertEqual(dset1.name, dset2.name)
+        self.assertEqual(dset1.shape, dset2.shape)
+        self.assertEqual(dset1.dtype, dset2.dtype)
+        self.assertEqual(dset1.ndim, dset2.ndim)
+        self.assertEqual(dset1.fillvalue, dset2.fillvalue)
+        self.assertEqual(dset1.chunk_size, dset2.chunk_size)
+        self.assertIsNone(np.testing.assert_array_equal(dset1.chunk_grid, dset2.chunk_grid))
+        self.assertIsNone(assert_array_equal(dset1[:], dset2[:]))
 
 
     def test_root_group_exists(self):
@@ -431,13 +442,6 @@ class GroupTest(unittest.TestCase):
         self.assertTrue(A.create_link(dset_path))
         A_data = A.get_dataset(dset_path)
         root_data = root.get_dataset(dset_path)
-        self.assertEqual(A_data.name, root_data.name)
-        self.assertEqual(A_data.shape, root_data.shape)
-        self.assertEqual(A_data.dtype, root_data.dtype)
-        self.assertEqual(A_data.ndim, root_data.ndim)
-        self.assertEqual(A_data.fillvalue, root_data.fillvalue)
-        self.assertEqual(A_data.chunk_size, root_data.chunk_size)
-        self.assertIsNone(np.testing.assert_array_equal(A_data.chunk_grid, root_data.chunk_grid))
-        self.assertIsNone(assert_array_equal(A_data[:], root_data[:]))
+        self.compare_datasets(root_data, A_data)
         # Returns false when no dataset or group with that name
         self.assertFalse(A.create_link("/D"))
