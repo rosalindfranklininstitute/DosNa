@@ -363,3 +363,29 @@ class GroupTest(unittest.TestCase):
 
         self.assertTrue(root.has_dataset("/data"))
         self.assertFalse(A.has_dataset("/data"))
+
+    def test_get_dataset(self):
+        grp = "/A"
+        data = np.random.randn(100, 100, 100)
+        root = self.connection_handle.get_group(PATH_SPLIT)
+        A = root.create_group(grp)
+        chunk_grid = (32, 32, 32)
+        data1 = root.create_dataset("data", data=data, chunk_size=chunk_grid)
+        path = root.name + "data"
+        root_data = root.get_dataset(path)
+        # Compare data with got
+        self.assertIsNone(assert_array_equal(data, root_data[:]))
+        self.assertEqual(root_data.name, path)
+        self.assertEqual(root_data.chunk_size, chunk_grid)
+        # Compare created with got
+        self.assertEqual(data1.name, root_data.name)
+        self.assertEqual(data1.shape, root_data.shape)
+        self.assertEqual(data1.dtype, root_data.dtype)
+        self.assertEqual(data1.ndim, root_data.ndim)
+        self.assertEqual(data1.fillvalue, root_data.fillvalue)
+        self.assertEqual(data1.chunk_size, root_data.chunk_size)
+        self.assertIsNone(np.testing.assert_array_equal(data1.chunk_grid, root_data.chunk_grid))
+        self.assertIsNone(assert_array_equal(data1[:], root_data[:]))
+        # Check A can't get the dataset as it's not linked
+        with self.assertRaises(DatasetNotFoundError):
+            A.get_dataset(path)
