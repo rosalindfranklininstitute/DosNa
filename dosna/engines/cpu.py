@@ -19,6 +19,9 @@ class CpuConnection(EngineConnection):
         instance = get_backend(bname).Connection(*args, **kwargs)
         super(CpuConnection, self).__init__(instance)
 
+    def __getitem__(self, name):
+        return self.get_object(name)
+
     def get_dataset(self, name):
         dataset = self.instance.get_dataset(name)
         return CpuDataset(dataset)
@@ -42,7 +45,6 @@ class CpuConnection(EngineConnection):
         return engine_group
 
     def get_object(self, name):
-
         try:
             group = self.instance.get_group(name)
             return CpuGroup(group)
