@@ -100,6 +100,11 @@ class EngineGroup(BackendWrapper):
 
     def del_dataset(self, name):
         dataset = self.get_dataset(name)
+        if self.name == self.path_split:
+            if dataset.name[:len(self.name)] != self.name:
+                raise ParentDatasetError(self.name, name)
+        elif dataset.name[:len(self.name)+1] != self.name + self.path_split:
+            raise ParentDatasetError(self.name, name)
         dataset.clear()
         self.instance.del_dataset(name)
 
@@ -171,3 +176,11 @@ class EngineDataset(BackendWrapper):
 
 class EngineDataChunk(BackendWrapper):
     pass
+
+
+class ParentDatasetError(Exception):
+    def __init__(self, parent, dataset):
+        self.parent = parent
+        self.dataset = dataset
+        self.message = "Can not delete dataset as " + self.parent + " is not a parent to " + self.dataset
+        super().__init__(self.message)
