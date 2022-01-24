@@ -96,7 +96,11 @@ class CpuGroup(EngineGroup):
     def get_datasets(self):
         datasets = self.instance.get_datasets()
         for key, value in datasets.items():
-            datasets[key] = CpuDataset(self.instance.get_dataset(key))
+            dataset = self.instance.get_dataset(key)
+            if dataset is None:
+                datasets[key] = None
+            else:
+                datasets[key] = CpuDataset(dataset)
         return datasets
 
     def get_object(self, name):
