@@ -454,3 +454,10 @@ class GroupNotFoundError(Exception):
         self.group = group
         self.message = "Group " + self.group + " does not exist"
         super().__init__(self.message)
+
+class ParentLinkError(Exception):
+    def __init__(self, parent, link):
+        self.parent = parent
+        self.link = link
+        self.message = "Can not delete link " + self.parent + " is parent to " + self.link
+        super().__init__(self.message)
