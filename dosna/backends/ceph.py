@@ -8,7 +8,8 @@ import numpy as np
 from dosna.backends import Backend
 from dosna.backends.base import (BackendConnection, BackendDataChunk,
                                  BackendDataset, BackendGroup, BackendLink, ConnectionError,
-                                 DatasetNotFoundError, GroupNotFoundError, GroupExistsError, DatasetExistsError)
+                                 DatasetNotFoundError, GroupNotFoundError, GroupExistsError, DatasetExistsError,
+                                 ParentLinkError)
 from dosna.util import dtype2str, shape2str, str2shape, str2dict, dict2str
 from dosna.util.data import slices2shape
 _PATH_SPLIT = '/'
@@ -337,6 +338,18 @@ class CephGroup(BackendGroup):
                 target = None
                 links[key] = CephLink(source, target, path)
         return links
+
+    def del_link(self, name):
+        links = str2dict(self.ioctx.get_xattr(self.name, "links").decode())
+        if name in links and self._has_group_object(name):
+            link_parent = self.ioctx.get_xattr(name, "parent").decode()
+            if link_parent != self.name:
+                del links[name]
+                self.ioctx.set_xattr(self.name, "links", dict2str(links).encode(_ENCODING))
+                return links
+            raise ParentLinkError(self.name, name)
+        raise GroupNotFoundError(name)
+
 
     def create_dataset(self, name, shape=None, dtype=np.float32, fillvalue=0,
                        data=None, chunk_size=None):
