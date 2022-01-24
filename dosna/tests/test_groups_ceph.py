@@ -285,6 +285,25 @@ class GroupTest(unittest.TestCase):
         with self.assertRaises(GroupNotFoundError):
             B.get_group("/A")
 
+    def test_del_link2grp(self):
+        group_abc = "/A/B/C"
+        group_b = "/B"
+        root = self.connection_handle.get_group(PATH_SPLIT)
+        root.create_group(group_abc)
+        root.create_group(group_b)
+        A = root.get_group("/A")
+        B = root.get_group(group_b)
+        self.assertNotIn(group_b, A.get_links())
+        A.create_link(group_b)
+        self.assertIn(group_b, A.get_links())
+        A.del_link(group_b)
+        self.assertNotIn(group_b, A.get_links())
+        with self.assertRaises(ParentLinkError):
+            A.del_link("/A/B")
+        with self.assertRaises(GroupNotFoundError):
+            A.del_link(group_b)
+
+
     def test_get_link2_del_group(self):
         group_a = "/A"
         group_b = "/B"
