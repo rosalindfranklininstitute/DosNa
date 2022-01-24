@@ -10,6 +10,7 @@ from dosna.backends.base import (BackendConnection, BackendDataChunk,
                                  BackendDataset, BackendGroup, BackendLink, ConnectionError,
                                  DatasetNotFoundError, GroupNotFoundError, GroupExistsError, DatasetExistsError,
                                  ParentLinkError)
+from dosna.engines.base import ParentDatasetError
 from dosna.util import dtype2str, shape2str, str2shape, str2dict, dict2str
 from dosna.util.data import slices2shape
 _PATH_SPLIT = '/'
@@ -224,6 +225,39 @@ class CephGroup(BackendGroup):
             return True
         return False
 
+    def _del_group_link(self, name):
+        links = str2dict(self.ioctx.get_xattr(self.name, "links").decode())
+        if name in links:
+            link_parent = self.ioctx.get_xattr(name, "parent").decode()
+            if link_parent != self.name:
+                del links[name]
+                self.ioctx.set_xattr(self.name, "links", dict2str(links).encode(_ENCODING))
+                return links
+            raise ParentLinkError(self.name, name)
+        raise GroupNotFoundError(self.name)
+
+    def _del_dataset_link(self, name):
+        datasets = str2dict(self.ioctx.get_xattr(self.name, "datasets").decode())
+        if name in datasets:
+            if self.name == self.path_split:
+                if name[:len(self.name)] == self.name:
+                    raise ParentLinkError(self.name, name)
+            elif name[:len(self.name) + 1] == self.name + self.path_split:
+                raise ParentLinkError(self.name, name)
+            del datasets[name]
+            self.ioctx.set_xattr(self.name, "datasets", str(datasets).encode(_ENCODING))
+            return datasets
+        raise DatasetNotFoundError(name)
+
+    def del_link(self, name):
+        if self._has_group_object(name):
+            self._del_group_link(name)
+            return True
+        elif self._has_dataset_object(name):
+            self._del_dataset_link(name)
+            return True
+        return False
+
     def _create_group_object(self, path, attrs={}):
         attrs = {str(key): str(value) for key, value in attrs.items()}
         absolute_path = self.create_absolute_path(path)
@@ -317,6 +351,10 @@ class CephGroup(BackendGroup):
     def get_attrs(self):
         return str2dict(self.ioctx.get_xattr(self.name, "attrs").decode())
 
+    def set_attrs(self, attrs):
+        self.ioctx.set_xattr(self.name, "attrs", str(attrs).encode(_ENCODING))
+        return str2dict(self.ioctx.get_xattr(self.name, "attrs").decode())
+
     def get_links(self):
         links = str2dict(self.ioctx.get_xattr(self.name, "links").decode())
         for key, value in links.items():
@@ -329,17 +367,6 @@ class CephGroup(BackendGroup):
                 target = None
                 links[key] = CephLink(source, target, path)
         return links
-
-    def del_link(self, name):
-        links = str2dict(self.ioctx.get_xattr(self.name, "links").decode())
-        if name in links and self._has_group_object(name):
-            link_parent = self.ioctx.get_xattr(name, "parent").decode()
-            if link_parent != self.name:
-                del links[name]
-                self.ioctx.set_xattr(self.name, "links", dict2str(links).encode(_ENCODING))
-                return links
-            raise ParentLinkError(self.name, name)
-        raise GroupNotFoundError(name)
 
 
     def create_dataset(self, name, shape=None, dtype=np.float32, fillvalue=0,
@@ -402,6 +429,8 @@ class CephGroup(BackendGroup):
     def get_dataset(self, name):
         if not self.has_dataset(name):
             raise DatasetNotFoundError('Dataset `%s` does not exist' % name)
+        if not self._has_dataset_object(name):
+            return None
         return self._get_dataset(name)
 
     def del_dataset(self, name):
