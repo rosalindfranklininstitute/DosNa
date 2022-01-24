@@ -554,3 +554,25 @@ class GroupTest(unittest.TestCase):
         root.del_dataset(dset_path)
         self.assertDictEqual(A.get_datasets(), {'/data': None})
         self.assertDictEqual(root.get_datasets(), {})
+
+    def test_del_link2dataset(self):
+        group_a = "/A"
+        root = self.connection_handle.get_group(PATH_SPLIT)
+        A = root.create_group(group_a)
+        data = np.random.randn(100, 100, 100)
+        chunk_grid = (32, 32, 32)
+        root.create_dataset("data", data=data, chunk_size=chunk_grid)
+        dset_path = "/data"
+        with self.assertRaises(DatasetNotFoundError):
+            A.get_dataset(dset_path)
+        A.create_link(dset_path)
+        self.assertTrue(A.del_link(dset_path))
+        with self.assertRaises(ParentLinkError):
+            root.del_link(dset_path)
+        with self.assertRaises(DatasetNotFoundError):
+            A.del_link(dset_path)
+        self.assertDictEqual(A.get_datasets(), {})
+        A.create_dataset("data", data=data, chunk_size=chunk_grid)
+        with self.assertRaises(ParentLinkError):
+            A.del_link("/A/data")
+        self.assertIn("/data", root.get_datasets())
