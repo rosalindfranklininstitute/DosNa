@@ -6,6 +6,7 @@ import numpy as np
 from numpy.testing import assert_array_equal
 
 import dosna as dn
+from dosna.engines.base import ParentDatasetError
 from dosna.util import str2dict
 from dosna.engines.cpu import CpuGroup, CpuLink, CpuDataset
 from dosna.backends.ceph import CephGroup, CephLink
@@ -532,3 +533,24 @@ class GroupTest(unittest.TestCase):
             self.ioctx.read("/A/data/0.0.0")
         with self.assertRaises(rados.ObjectNotFound):
             self.ioctx.read("/A/B/C/data/0.0.0")
+
+    def test_del_linked_dataset(self):
+        group_a = "/A"
+        root = self.connection_handle.get_group(PATH_SPLIT)
+        A = root.create_group(group_a)
+        data = np.random.randn(100, 100, 100)
+        chunk_grid = (32, 32, 32)
+        root.create_dataset("data", data=data, chunk_size=chunk_grid)
+        dset_path = "/data"
+        with self.assertRaises(DatasetNotFoundError):
+            A.get_dataset(dset_path)
+        self.assertTrue(A.create_link(dset_path))
+        A_data = A.get_dataset(dset_path)
+        root_data = root.get_dataset(dset_path)
+        self.compare_datasets(root_data, A_data)
+        b = A["/d2w"]
+        with self.assertRaises(ParentDatasetError):
+            A.del_dataset(dset_path)
+        root.del_dataset(dset_path)
+        self.assertDictEqual(A.get_datasets(), {'/data': None})
+        self.assertDictEqual(root.get_datasets(), {})
