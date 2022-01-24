@@ -12,7 +12,7 @@ from dosna.backends.ceph import CephGroup, CephLink
 from dosna.backends.base import (
     DatasetNotFoundError,
     GroupNotFoundError,
-    GroupExistsError, DatasetExistsError,
+    GroupExistsError, DatasetExistsError, ParentLinkError,
 )
 
 
