@@ -104,7 +104,7 @@ class GroupTest(unittest.TestCase):
     def test_create_group(self):
         root = self.connection_handle.get_group(PATH_SPLIT)
         group_name = "/FakeGroup"
-        group_obj = self.connection_handle.create_group(group_name)
+        group_obj = root.create_group(group_name)
         self.assertEqual(type(group_obj), CpuGroup)
         self.check_group(group_obj, group_name, group_name)
         self.assertEqual(type(root), CpuGroup)
