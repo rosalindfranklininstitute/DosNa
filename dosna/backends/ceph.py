@@ -39,7 +39,7 @@ class CephConnection(BackendConnection):
         self._cluster = rados.Rados(**rados_options)
         self._timeout = timeout
         self._ioctx = None
-        self.root_group = None
+        self._root_group = None
 
     def connect(self):
         if self.connected:
@@ -50,7 +50,7 @@ class CephConnection(BackendConnection):
         super(CephConnection, self).connect()
         if self.has_group_object(_PATH_SPLIT) == False:
             self.create_root_group()
-        self.root_group = self.get_group(_PATH_SPLIT)
+        self._root_group = self._get_root_group()
 
     def create_root_group(self):
         self.ioctx.write(_PATH_SPLIT, _SIGNATURE_GROUP.encode(_ENCODING))
@@ -78,12 +78,12 @@ class CephConnection(BackendConnection):
         return self._ioctx
 
     def create_group(self, path, attrs={}):
-        return self.root_group.create_group(path, attrs)
+        return self._root_group.create_group(path, attrs)
 
     def get_group(self, name):
         if name == _PATH_SPLIT:
             return self._get_root_group()
-        return self.root_group.get_group(name)
+        return self._root_group.get_group(name)
 
     def has_group_object(self, name):
         try:
@@ -94,7 +94,7 @@ class CephConnection(BackendConnection):
         return valid
 
     def del_group(self, path):
-        return self.root_group.del_group(path)
+        return self._root_group.del_group(path)
 
     def create_dataset(self, name, shape=None, dtype=np.float32, fillvalue=0,
                        data=None, chunk_size=None):
@@ -157,15 +157,6 @@ class CephConnection(BackendConnection):
 class CephLink(BackendLink):
     def __init__(self, source, target, name):
         super(CephLink, self).__init__(source, target, name)
-
-    def get_source(self):
-        return self.source
-
-    def get_target(self):
-        return self.target
-
-    def get_name(self):
-        return self.name
 
 
 class CephGroup(BackendGroup):
