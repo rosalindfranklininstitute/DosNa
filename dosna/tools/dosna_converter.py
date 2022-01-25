@@ -23,7 +23,7 @@ _ABSOLUTE_PATH = 'absolute_path'
 _METADATA = 'metadata'
 _ATTRS = 'attrs'
 _LINKS = 'links'
-
+_DATASETS = 'datasets'
 @contextmanager
 def hdf_file(hdf, *args, **kwargs):
     if isinstance(hdf, str):
@@ -40,78 +40,72 @@ class Dosnatohdf5(object):
 
         def _recurse(group, links, dosnadict):
             for key, value in links.items():
-                object = value.target
-                if hasattr(object, _LINKS):
-                    subgroup = group.get_group(key)
-                    dosnadict[key] = dict()
-                    dosnadict[key][_ATTRS] = subgroup.attrs
-                    dosnadict[key] = _recurse(subgroup, subgroup.links, dosnadict[key])
-                else:
-                    dosnadict[key] = group.get_dataset(key)
+                subgroup = group.get_group(value.target)
+                dosnadict[key] = dict()
+                dosnadict[key][_ATTRS] = subgroup.get_attrs()
+                dosnadict[key] = _recurse(subgroup, subgroup.get_links(), dosnadict[key])
+                if subgroup.get_datasets() != {}:
+                    dosnadict[key][_DATASETS] = {}
+                    for dset in subgroup.get_datasets():
+                        dosnadict[key][_DATASETS][dset] = subgroup.get_dataset(dset)
             return dosnadict
 
-        dosnadict = _recurse(self._connection, self._connection.root_group.links, {})
+        dosnadict = _recurse(self._connection.get_group("/"), self._connection.get_group("/").get_links(), {})
 
         return dosnadict
 
     def dosna2hdf(self, h5file):
-        dosnadict = self.dosna2dict()
 
-        def _recurse(dosnadict, hdfobject):
-            for key, value in dosnadict.items():
-                if isinstance(value, dict):
-                    if key != _ATTRS:
-                        if not key in list(hdfobject.keys()):
-                            hdfgroup = hdfobject.create_group(key)
-                            for k, v in value[_ATTRS].items():
-                                hdfgroup.attrs[k] = v
-                            _recurse(value, hdfgroup)
-                        else:
-                            raise Exception('Group: ', key, 'already created.')
-                else:
-                    if not key in list(hdfobject.keys()):
-                        dataset = hdfobject.create_dataset(
-                            key,
-                            shape=value.shape,
-                            chunks=value.chunk_size,
-                            dtype=value.dtype,
-                        )
-                        if dataset.chunks is not None:
-                            for s in dataset.iter_chunks():
-                                dataset[s] = value[s]
-                    else:
-                        raise Exception('Dataset', key, 'already created.')
+        def _recurse(group, links, hdfobject):
+            for key, value in links.items():
+                subgroup = group.get_group(value.target)
+                hdfgroup = hdfobject.create_group(key)
+                for k, v in subgroup.get_attrs().items():
+                    hdfgroup[key].attrs[k] = v
+                _recurse(subgroup, subgroup.get_links(), hdfgroup[key])
+                if subgroup.get_datasets() != {}:
+                    for dset in subgroup.get_datasets():
+                        dosna_dataset = subgroup.get_dataset(dset)
+                        hdf_dataset = hdfobject.create_dataset(
+                                    dosna_dataset.name,
+                                    shape=dosna_dataset.shape,
+                                    chunks=dosna_dataset.chunk_size,
+                                    dtype=dosna_dataset.dtype,
+                                )
+                        if hdf_dataset.chunks is not None:
+                            for s in hdf_dataset.iter_chunks():
+                                hdf_dataset[s] = dosna_dataset[s]
 
         with h5py.File(h5file, 'w') as hdf:
-            _recurse(dosnadict, hdf)
+            _recurse(self._connection.get_group("/"), self._connection.get_group("/").get_links(), hdf)
             return hdf
 
     def dosna2json(self, jsonfile):
-        dosnadict = self.dosna2dict()
-        def _recurse(dosnadict, jsondict):
-            for key, value in dosnadict.items():
-                if isinstance(value, dict):
-                    if key != _ATTRS:
-                        jsondict[key] = dict()
-                        jsondict[key][_ATTRS] = value[_ATTRS]
-                        jsondict[key] = _recurse(value, jsondict[key])
-                else:
-                    jsondict[key] = dict()
-                    jsondict[key][_DATASET_NAME] = key
-                    jsondict[key][_ABSOLUTE_PATH] = value.get_absolute_path()
-                    jsondict[key][_SHAPE] = value.shape
-                    jsondict[key][_NDIM] = value.ndim
-                    jsondict[key][_DTYPE] = value.dtype.str
-                    jsondict[key][_FILLVALUE] = float(value.fillvalue)
-                    jsondict[key][_CHUNK_SIZE] = value.chunk_size
-                    jsondict[key][_CHUNK_GRID] = value.chunk_grid.tolist()
-                    jsondict[key][_IS_DATASET] = True
-                    data = value[:]
-                    jsondict[key][_DATASET_VALUE] = data.tolist()
+
+        def _recurse(group, links, jsondict):
+            for key, value in links.items():
+                subgroup = group.get_group(value.target)
+                jsondict[key] = dict()
+                jsondict[key][_ATTRS] = subgroup.get_attrs()
+                jsondict[key] = _recurse(subgroup, subgroup.get_links(), jsondict[key])
+                if subgroup.get_datasets() != {}:
+                    jsondict[key][_DATASETS] = {}
+                    for dset in subgroup.get_datasets():
+                        dataset = subgroup.get_dataset(dset)
+                        jsondict[key][_DATASETS][dset] = {}
+                        jsondict[key][_DATASETS][dset][_DATASET_NAME] = dataset.name
+                        jsondict[key][_DATASETS][dset][_SHAPE] = dataset.shape
+                        jsondict[key][_DATASETS][dset][_NDIM] = dataset.ndim
+                        jsondict[key][_DATASETS][dset][_DTYPE] = dataset.dtype
+                        jsondict[key][_DATASETS][dset][_FILLVALUE] = float(dataset.fillvalue)
+                        jsondict[key][_DATASETS][dset][_CHUNK_SIZE] = dataset.chunk_size
+                        jsondict[key][_DATASETS][dset][_CHUNK_GRID] = dataset.chunk_grid
+                        jsondict[key][_DATASETS][dset][_IS_DATASET] = True
+                        data = dataset[:]
+                        jsondict[key][_DATASETS][dset][_DATASET_VALUE] = data.tolist()
             return jsondict
 
-        jsondict = _recurse(dosnadict, {})
-
+        jsondict = _recurse(self._connection.get_group("/"), self._connection.get_group("/").get_links(), {})
         def json_encoder(obj):
             if isinstance(obj, np.ndarray):
                 object_list = obj.tolist()
@@ -124,43 +118,3 @@ class Dosnatohdf5(object):
             f.write(json.dumps(jsondict, default=json_encoder))
 
         return jsondict
-
-    # def json_to_hdf5(self, jsonfile, h5file):
-    #
-    #     with open(jsonfile, 'r') as f:
-    #         jsondict = json.loads(f.read())
-    #
-    #     def _recurse(jsondict, hdf5dict, group):
-    #         for key, value in jsondict.items():
-    #             if isinstance(value, dict):
-    #                 if not _IS_DATASET in value:
-    #                     subgroup = group.get(key)
-    #                     _recurse(value, hdf5dict, subgroup)
-    #                 else:
-    #                     dataset = group.get(key)
-    #
-    #     with h5py.File(h5file, "r") as hdf:
-    #         _recurse(jsondict, {}, hdf)
-    #         return hdf
-    #
-    # def hdf5file_to_hdf5dict(self, hdf5file):
-    #     def load(hdf):
-    #         def _recurse(hdfobject, datadict):
-    #             for key, value in hdfobject.items():
-    #                 if isinstance(value, h5py.Group):
-    #                     datadict[key] = dict()
-    #                     attrs = dict()
-    #                     for k, v in value.attrs.items():
-    #                         attrs[k] = v
-    #                     datadict[key][_ATTRS] = attrs
-    #                     datadict[key] = _recurse(value, datadict[key])
-    #                 elif isinstance(value, h5py.Dataset):
-    #                     datadict[key] = value
-    #             return datadict
-    #
-    #         with hdf_file(hdf) as hdf:
-    #             data = dict(_h5file=hdf)
-    #             return _recurse(hdf, data)
-    #
-    #     hdf5dict = load(hdf5file)
-    #     return hdf5dict
