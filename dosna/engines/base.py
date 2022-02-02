@@ -45,11 +45,11 @@ class EngineConnection(BackendWrapper):
         raise NotImplemented('get_group not implemented for this engine')
 
     def get_object(self, name):
-        object = self.instance.get_object(name)
+        object = self.instance._get_group_object(name)
         return object
     
     def del_group(self, name):
-        self.instance.del_group(name)
+        return self.instance.del_group(name)
 
     def create_dataset(self, name, shape=None, dtype=np.float32, fillvalue=0,
                        data=None, chunk_size=None):
@@ -96,16 +96,15 @@ class EngineGroup(BackendWrapper):
         return dataset
     
     def get_dataset(self, name):
-        dataset = self.get_dataset(name)
-        return dataset
-        
-        # this is meant to wrap the dataset with the specific engine class
-        """
-        raise NotImplementedError('`get_dataset` not implemented '
-                                  'for this engine')
-        """
+        raise NotImplemented('get_group not implemented for this engine')
+
     def del_dataset(self, name):
         dataset = self.get_dataset(name)
+        if self.name == self.path_split:
+            if dataset.name[:len(self.name)] != self.name:
+                raise ParentDatasetError(self.name, name)
+        elif dataset.name[:len(self.name)+1] != self.name + self.path_split:
+            raise ParentDatasetError(self.name, name)
         dataset.clear()
         self.instance.del_dataset(name)
 
@@ -177,3 +176,11 @@ class EngineDataset(BackendWrapper):
 
 class EngineDataChunk(BackendWrapper):
     pass
+
+
+class ParentDatasetError(Exception):
+    def __init__(self, parent, dataset):
+        self.parent = parent
+        self.dataset = dataset
+        self.message = "Can not delete dataset as " + self.parent + " is not a parent to " + self.dataset
+        super().__init__(self.message)

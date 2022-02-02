@@ -87,10 +87,9 @@ class BackendConnection(object):
         
 class BackendGroup(object):
     
-    def __init__(self, parent, name, attrs, *args, **kwargs):
+    def __init__(self, parent, name, *args, **kwargs):
         self._parent = parent
         self._name = name
-        self._attrs = attrs
 
     @property
     def name(self):
@@ -428,8 +427,37 @@ class BackendDataChunk(object):
 class ConnectionError(Exception):
     pass
 
+
+class DatasetExistsError(Exception):
+    def __init__(self, dataset):
+        self.dataset = dataset
+        self.message = "Dataset " + self.dataset + " already exists"
+        super().__init__(self.message)
+
+
 class DatasetNotFoundError(Exception):
-    pass
+    def __init__(self, dataset):
+        self.dataset = dataset
+        self.message = "Dataset " + self.dataset + " Not Found"
+        super().__init__(self.message)
+
+
+class GroupExistsError(Exception):
+    def __init__(self, group):
+        self.group = group
+        self.message = "Group " + self.group + " already exists"
+        super().__init__(self.message)
+
 
 class GroupNotFoundError(Exception):
-    pass
+    def __init__(self, group):
+        self.group = group
+        self.message = "Group " + self.group + " does not exist"
+        super().__init__(self.message)
+
+class ParentLinkError(Exception):
+    def __init__(self, parent, link):
+        self.parent = parent
+        self.link = link
+        self.message = "Can not delete link " + self.parent + " is parent to " + self.link
+        super().__init__(self.message)

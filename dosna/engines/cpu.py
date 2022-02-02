@@ -19,6 +19,9 @@ class CpuConnection(EngineConnection):
         instance = get_backend(bname).Connection(*args, **kwargs)
         super(CpuConnection, self).__init__(instance)
 
+    def __getitem__(self, name):
+        return self.get_object(name)
+
     def get_dataset(self, name):
         dataset = self.instance.get_dataset(name)
         return CpuDataset(dataset)
@@ -42,7 +45,6 @@ class CpuConnection(EngineConnection):
         return engine_group
 
     def get_object(self, name):
-
         try:
             group = self.instance.get_group(name)
             return CpuGroup(group)
@@ -54,10 +56,15 @@ class CpuConnection(EngineConnection):
         except:
             pass
 
+    def del_group(self, name):
+        datasets = self.instance.del_group(name)
+        for dset in datasets:
+            self.del_dataset(dset)
+        return None
 
-    
+
 class CpuGroup(EngineGroup):
-    
+
     def create_group(self, name, attrs={}):
         group = self.instance.create_group(name, attrs)
         engine_group = CpuGroup(group)
@@ -66,6 +73,12 @@ class CpuGroup(EngineGroup):
     def get_group(self, name):
         group = self.instance.get_group(name)
         return CpuGroup(group)
+
+    def get_links(self):
+        links = self.instance.get_links()
+        for key in links:
+            links[key] = CpuLink(links[key])
+        return links
 
     def create_dataset(self, name, shape=None, dtype=np.float32, fillvalue=0,
                        data=None, chunk_size=None):
@@ -80,6 +93,16 @@ class CpuGroup(EngineGroup):
         dataset = self.instance.get_dataset(name)
         return CpuDataset(dataset)
 
+    def get_datasets(self):
+        datasets = self.instance.get_datasets()
+        for key, value in datasets.items():
+            dataset = self.instance.get_dataset(key)
+            if dataset is None:
+                datasets[key] = None
+            else:
+                datasets[key] = CpuDataset(dataset)
+        return datasets
+
     def get_object(self, name):
         try:
             group = self.instance.get_group(name)
@@ -92,14 +115,29 @@ class CpuGroup(EngineGroup):
         except:
             pass
 
+    def del_group(self, name):
+        datasets = self.instance.del_group(name)
+        for dset in datasets:
+            self.del_dataset_object(dset)
+        return None
+
+    def get_dataset_object(self, name):
+        dataset = self.instance._get_dataset_object(name)
+        return CpuDataset(dataset)
+
+    def del_dataset_object(self, name):
+        dataset = self.get_dataset_object(name)
+        dataset.clear()
+        self.instance._del_dataset_object(name)
+
 
 class CpuLink(EngineLink):
-    
+
     def get_source(self):
-        return self.instance.get_source()
+        return CpuGroup(self.instance.get_source())
     
     def get_target(self):
-        return self.instance.get_target()
+        return CpuGroup(self.instance.get_target())
     
     def get_name(self):
         return self.instance.get_name()
