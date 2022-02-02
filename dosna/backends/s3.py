@@ -47,7 +47,7 @@ class S3Connection(BackendConnection):
         self._client = None
         self._profile_name = profile_name
 
-        super(S3Connection, self).__init__(name, *args, **kwargs)
+        super(S3Connection, self).__init__(bucketName(name), *args, **kwargs)
 
     def connect(self):
 
@@ -62,9 +62,7 @@ class S3Connection(BackendConnection):
             endpoint_url=self._endpoint_url,
             verify=self._verify
         )
-
-        # Check bucket exists and is writable
-
+        self._client.create_bucket(Bucket=self.name)
         super(S3Connection, self).connect()
 
     def disconnect(self):
@@ -98,14 +96,6 @@ class S3Connection(BackendConnection):
         log.debug('creating dataset %s with shape:%s chunk_size:%s '
                   'chunk_grid:%s', name, shape, chunk_size, chunk_grid)
 
-        try:
-            self._client.create_bucket(Bucket=name, ACL='private')
-        except ClientError as e:
-            code = e.response['Error']['Code']
-            if code is not None:
-                log.error('connect: create_bucket returns %s', code)
-                return None
-
         metadata = {
             _SHAPE: shape2str(shape),
             _DTYPE: dtype2str(dtype),
@@ -113,7 +103,6 @@ class S3Connection(BackendConnection):
             _CHUNK_GRID: shape2str(chunk_grid),
             _CHUNK_SIZE: shape2str(chunk_size)
         }
-
         self._client.put_object(
             Bucket=name, Key=_DATASET_ROOT,
             Body=_SIGNATURE.encode(_ENCODING), Metadata=metadata
