@@ -138,32 +138,14 @@ class S3Connection(BackendConnection):
 
         return dataset
 
-    def get_dataset_root(self, name):
-
-        name = bucketName(name)
-
-        dataset_root = None
-        try:
-            dataset_root = self._client.get_object(
-                Bucket=name, Key=_DATASET_ROOT
-            )
-
-            content = dataset_root['Body'].read()
-            if not content == _SIGNATURE.encode(_ENCODING):
-                dataset_root = None
-
-        except Exception:
-            pass  # Don't need to report errors here
-
-        return dataset_root
-
     def has_dataset(self, name):
-
-        self._dataset_root = self.get_dataset_root(name)
-        if self._dataset_root is None:
-            log.info("has_dataset: dataset %s does not exist", name)
-
-        return self._dataset_root is not None
+        try:
+            valid = self._client.get_object(
+                Bucket=self.name, Key=name
+            )['Body'].read() == _SIGNATURE.encode(_ENCODING)
+        except Exception:  # Any exception it should return false
+            return False
+        return valid
 
     def del_dataset(self, name):
 
