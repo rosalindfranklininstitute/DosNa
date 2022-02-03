@@ -28,7 +28,7 @@ log = logging.getLogger(__name__)
 # Sanitise bucket name to conform to AWS conventions
 
 
-def bucketName(name):
+def bucket_name(name):
     return name.replace('_', '-').lower()
 
 
@@ -47,7 +47,7 @@ class S3Connection(BackendConnection):
         self._client = None
         self._profile_name = profile_name
 
-        super(S3Connection, self).__init__(bucketName(name), *args, **kwargs)
+        super(S3Connection, self).__init__(bucket_name(name), *args, **kwargs)
 
     def connect(self):
 
