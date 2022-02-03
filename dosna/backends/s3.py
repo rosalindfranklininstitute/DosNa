@@ -14,7 +14,6 @@ from dosna.backends.base import (BackendConnection, BackendDataChunk,
 from dosna.util import dtype2str, shape2str, str2shape
 from dosna.util.data import slices2shape
 
-_DATASET_ROOT = 'dataset_root'
 _SIGNATURE = "DosNa Dataset"
 _ENCODING = "utf-8"
 _SHAPE = 'shape'
@@ -28,7 +27,7 @@ log = logging.getLogger(__name__)
 # Sanitise bucket name to conform to AWS conventions
 
 
-def bucketName(name):
+def bucket_name(name):
     return name.replace('_', '-').lower()
 
 
@@ -47,7 +46,7 @@ class S3Connection(BackendConnection):
         self._client = None
         self._profile_name = profile_name
 
-        super(S3Connection, self).__init__(name, *args, **kwargs)
+        super(S3Connection, self).__init__(bucket_name(name), *args, **kwargs)
 
     def connect(self):
 
@@ -62,9 +61,7 @@ class S3Connection(BackendConnection):
             endpoint_url=self._endpoint_url,
             verify=self._verify
         )
-
-        # Check bucket exists and is writable
-
+        self._client.create_bucket(Bucket=self.name)
         super(S3Connection, self).connect()
 
     def disconnect(self):
@@ -93,18 +90,9 @@ class S3Connection(BackendConnection):
         chunk_grid = (np.ceil(np.asarray(shape, float) / chunk_size))\
             .astype(int)
 
-        name = bucketName(name)
 
         log.debug('creating dataset %s with shape:%s chunk_size:%s '
                   'chunk_grid:%s', name, shape, chunk_size, chunk_grid)
-
-        try:
-            self._client.create_bucket(Bucket=name, ACL='private')
-        except ClientError as e:
-            code = e.response['Error']['Code']
-            if code is not None:
-                log.error('connect: create_bucket returns %s', code)
-                return None
 
         metadata = {
             _SHAPE: shape2str(shape),
@@ -113,9 +101,8 @@ class S3Connection(BackendConnection):
             _CHUNK_GRID: shape2str(chunk_grid),
             _CHUNK_SIZE: shape2str(chunk_size)
         }
-
         self._client.put_object(
-            Bucket=name, Key=_DATASET_ROOT,
+            Bucket=self.name, Key=name,
             Body=_SIGNATURE.encode(_ENCODING), Metadata=metadata
         )
 
@@ -131,7 +118,9 @@ class S3Connection(BackendConnection):
         if not self.has_dataset(name):
             raise DatasetNotFoundError('Dataset `%s` does not exist' % name)
 
-        metadata = self._dataset_root['Metadata']
+        metadata = self._client.get_object(
+                Bucket=self.name, Key=name
+            )['Metadata']
         if metadata is None:
             raise DatasetNotFoundError(
                 'Dataset `%s` does not have required DosNa metadata' % name
@@ -149,41 +138,20 @@ class S3Connection(BackendConnection):
 
         return dataset
 
-    def get_dataset_root(self, name):
-
-        name = bucketName(name)
-
-        dataset_root = None
-        try:
-            dataset_root = self._client.get_object(
-                Bucket=name, Key=_DATASET_ROOT
-            )
-
-            content = dataset_root['Body'].read()
-            if not content == _SIGNATURE.encode(_ENCODING):
-                dataset_root = None
-
-        except Exception:
-            pass  # Don't need to report errors here
-
-        return dataset_root
-
     def has_dataset(self, name):
-
-        self._dataset_root = self.get_dataset_root(name)
-        if self._dataset_root is None:
-            log.info("has_dataset: dataset %s does not exist", name)
-
-        return self._dataset_root is not None
+        try:
+            valid = self._client.get_object(
+                Bucket=self.name, Key=name
+            )['Body'].read() == _SIGNATURE.encode(_ENCODING)
+        except Exception:  # Any exception it should return false
+            return False
+        return valid
 
     def del_dataset(self, name):
 
         if self.has_dataset(name):
-
-            name = bucketName(name)
             try:
-                self._client.delete_object(Bucket=name, Key=_DATASET_ROOT)
-                self._client.delete_bucket(Bucket=name)
+                self._client.delete_object(Bucket=self.name, Key=name)
             except ClientError as e:
                 log.error('del_dataset: cannot delete %s: %s',
                           name, e.response['Error'])
@@ -202,7 +170,7 @@ class S3Dataset(BackendDataset):
         return self.connection.client
 
     def _idx2name(self, idx):
-        return '.'.join(map(str, idx))
+        return '{}/{}'.format(self.name, '.'.join(map(str, idx)))
 
     def create_chunk(self, idx, data=None, slices=None):
         if self.has_chunk(idx):
@@ -233,17 +201,17 @@ class S3Dataset(BackendDataset):
         has_chunk = False
         name = self._idx2name(idx)
         try:
-            self.client.head_object(Bucket=bucketName(self._name), Key=name)
+            self.client.head_object(Bucket=self.connection.name, Key=name)
             has_chunk = True
         except ClientError as e:
-            log.debug("ClientError: %s", e.response['Error']['Code'])
+            logging.debug("ClientError: %s", e.response['Error']['Code'])
 
         return has_chunk
 
     def del_chunk(self, idx):
         if self.has_chunk(idx):
             self.client.delete_object(
-                Bucket=bucketName(self._name),
+                Bucket=self.connection.name,
                 Key=self._idx2name(idx)
             )
             return True
@@ -255,6 +223,10 @@ class S3DataChunk(BackendDataChunk):
     @property
     def client(self):
         return self.dataset.client
+
+    @property
+    def connection(self):
+        return self.dataset.connection
 
     def get_data(self, slices=None):
         if slices is None:
@@ -277,7 +249,7 @@ class S3DataChunk(BackendDataChunk):
     def write_full(self, data):
 
         self.client.put_object(
-            Bucket=bucketName(self.dataset.name), Key=self.name, Body=data
+            Bucket=self.connection.name, Key=self.name, Body=data
         )
 
     def read(self, length=None, offset=0):
@@ -286,7 +258,7 @@ class S3DataChunk(BackendDataChunk):
 
         byteRange = 'bytes={}-{}'.format(offset, offset+length-1)
         return self.client.get_object(
-            Bucket=bucketName(self.dataset.name),
+            Bucket=self.connection.name,
             Key=self.name,
             Range=byteRange
         )['Body'].read()
