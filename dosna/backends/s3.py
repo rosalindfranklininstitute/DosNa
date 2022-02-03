@@ -9,9 +9,9 @@ import boto3
 from botocore.exceptions import ClientError
 from dosna.backends import Backend
 from dosna.backends.base import (BackendConnection, BackendDataChunk,
-                                 BackendDataset, ConnectionError,
-                                 DatasetNotFoundError)
-from dosna.util import dtype2str, shape2str, str2shape
+                                 BackendDataset, BackendGroup, BackendLink, ConnectionError,
+                                 DatasetNotFoundError, GroupExistsError)
+from dosna.util import dtype2str, shape2str, str2shape, str2dict, dict2str
 from dosna.util.data import slices2shape
 
 _SIGNATURE = "DosNa Dataset"
@@ -45,7 +45,7 @@ class S3Connection(BackendConnection):
         self._verify = verify
         self._client = None
         self._profile_name = profile_name
-
+        self._root_group = None
         super(S3Connection, self).__init__(bucket_name(name), *args, **kwargs)
 
     def connect(self):
@@ -64,6 +64,13 @@ class S3Connection(BackendConnection):
         self._client.create_bucket(Bucket=self.name)
         super(S3Connection, self).connect()
 
+
+    def create_root_group(self):
+        raise NotImplementedError('implemented for this backend')
+
+    def _get_root_group(self,):
+        raise NotImplementedError('implemented for this backend')
+
     def disconnect(self):
 
         if self.connected:
@@ -72,6 +79,18 @@ class S3Connection(BackendConnection):
     @property
     def client(self):
         return self._client
+
+    def create_group(self, path, attrs={}):
+        raise NotImplementedError('implemented for this backend')
+
+    def get_group(self, name):
+        raise NotImplementedError('implemented for this backend')
+
+    def has_group_object(self, name):
+        raise NotImplementedError('implemented for this backend')
+
+    def del_group(self, path):
+        raise NotImplementedError('implemented for this backend')
 
     def create_dataset(self, name, shape=None, dtype=np.float32, fillvalue=0,
                        data=None, chunk_size=None):
@@ -158,6 +177,103 @@ class S3Connection(BackendConnection):
         else:
             raise DatasetNotFoundError(
                 'Dataset `{}` does not exist'.format(name))
+
+class S3Link(BackendLink):
+    def __init__(self, source, target, name):
+        super(S3Link, self).__init__(source, target, name)
+
+
+class S3Group(BackendGroup):
+    def __init__(self, parent, name, absolute_path, path_split="/"):
+        super(S3Group, self).__init__(parent, name)
+        self.path_split = path_split
+        self.absolute_path = absolute_path
+
+    @property
+    def client(self):
+        return self.connection.client
+
+    def create_absolute_path(self, path):
+        raise NotImplementedError('implemented for this backend')
+
+    def create_group(self, path, attrs={}):
+        raise NotImplementedError('implemented for this backend')
+
+    def _create_group_link(self, path):
+        raise NotImplementedError('implemented for this backend')
+
+    def _create_dataset_link(self, path):
+        raise NotImplementedError('implemented for this backend')
+
+    def create_link(self, path):
+        raise NotImplementedError('implemented for this backend')
+
+    def _del_group_link(self, name):
+        raise NotImplementedError('implemented for this backend')
+
+    def _del_dataset_link(self, name):
+        raise NotImplementedError('implemented for this backend')
+
+    def del_link(self, name):
+        raise NotImplementedError('implemented for this backend')
+
+    def _create_group_object(self, path, attrs={}):
+        raise NotImplementedError('implemented for this backend')
+
+    def get_group(self, path):
+        raise NotImplementedError('implemented for this backend')
+
+    def _get_group_object(self, name):
+        raise NotImplementedError('implemented for this backend')
+
+    def has_group(self, name):
+        raise NotImplementedError('implemented for this backend')
+
+    def _has_group_object(self, name):
+        raise NotImplementedError('implemented for this backend')
+
+    def _del_group_object(self, path):
+        raise NotImplementedError('implemented for this backend')
+
+    def del_group(self, path, root=None):
+        raise NotImplementedError('implemented for this backend')
+
+    def get_attrs(self):
+        raise NotImplementedError('implemented for this backend')
+
+    def set_attrs(self, attrs):
+        raise NotImplementedError('implemented for this backend')
+
+    def get_links(self):
+        raise NotImplementedError('implemented for this backend')
+
+    def create_dataset(self, name, shape=None, dtype=np.float32, fillvalue=0,
+                       data=None, chunk_size=None):
+        raise NotImplementedError('implemented for this backend')
+
+    def _get_dataset(self, name):
+        raise NotImplementedError('implemented for this backend')
+
+    def has_dataset(self, name):
+        raise NotImplementedError('implemented for this backend')
+
+    def get_datasets(self):
+        raise NotImplementedError('implemented for this backend')
+
+    def get_dataset(self, name):
+        raise NotImplementedError('implemented for this backend')
+
+    def del_dataset(self, name):
+        raise NotImplementedError('implemented for this backend')
+
+    def _get_dataset_object(self, name):
+        raise NotImplementedError('implemented for this backend')
+
+    def _has_dataset_object(self, name):
+        raise NotImplementedError('implemented for this backend')
+
+    def _del_dataset_object(self, name):
+        raise NotImplementedError('implemented for this backend')
 
 
 class S3Dataset(BackendDataset):
