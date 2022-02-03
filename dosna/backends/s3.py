@@ -14,7 +14,6 @@ from dosna.backends.base import (BackendConnection, BackendDataChunk,
 from dosna.util import dtype2str, shape2str, str2shape
 from dosna.util.data import slices2shape
 
-_DATASET_ROOT = 'dataset_root'
 _SIGNATURE = "DosNa Dataset"
 _ENCODING = "utf-8"
 _SHAPE = 'shape'
@@ -91,7 +90,6 @@ class S3Connection(BackendConnection):
         chunk_grid = (np.ceil(np.asarray(shape, float) / chunk_size))\
             .astype(int)
 
-        name = bucketName(name)
 
         log.debug('creating dataset %s with shape:%s chunk_size:%s '
                   'chunk_grid:%s', name, shape, chunk_size, chunk_grid)
@@ -104,7 +102,7 @@ class S3Connection(BackendConnection):
             _CHUNK_SIZE: shape2str(chunk_size)
         }
         self._client.put_object(
-            Bucket=name, Key=_DATASET_ROOT,
+            Bucket=self.name, Key=name,
             Body=_SIGNATURE.encode(_ENCODING), Metadata=metadata
         )
 
@@ -120,7 +118,9 @@ class S3Connection(BackendConnection):
         if not self.has_dataset(name):
             raise DatasetNotFoundError('Dataset `%s` does not exist' % name)
 
-        metadata = self._dataset_root['Metadata']
+        metadata = self._client.get_object(
+                Bucket=self.name, Key=name
+            )['Metadata']
         if metadata is None:
             raise DatasetNotFoundError(
                 'Dataset `%s` does not have required DosNa metadata' % name
@@ -150,11 +150,8 @@ class S3Connection(BackendConnection):
     def del_dataset(self, name):
 
         if self.has_dataset(name):
-
-            name = bucketName(name)
             try:
-                self._client.delete_object(Bucket=name, Key=_DATASET_ROOT)
-                self._client.delete_bucket(Bucket=name)
+                self._client.delete_object(Bucket=self.name, Key=name)
             except ClientError as e:
                 log.error('del_dataset: cannot delete %s: %s',
                           name, e.response['Error'])
@@ -173,7 +170,7 @@ class S3Dataset(BackendDataset):
         return self.connection.client
 
     def _idx2name(self, idx):
-        return '.'.join(map(str, idx))
+        return '{}/{}'.format(self.name, '.'.join(map(str, idx)))
 
     def create_chunk(self, idx, data=None, slices=None):
         if self.has_chunk(idx):
@@ -204,17 +201,17 @@ class S3Dataset(BackendDataset):
         has_chunk = False
         name = self._idx2name(idx)
         try:
-            self.client.head_object(Bucket=bucketName(self._name), Key=name)
+            self.client.head_object(Bucket=self.connection.name, Key=name)
             has_chunk = True
         except ClientError as e:
-            log.debug("ClientError: %s", e.response['Error']['Code'])
+            logging.debug("ClientError: %s", e.response['Error']['Code'])
 
         return has_chunk
 
     def del_chunk(self, idx):
         if self.has_chunk(idx):
             self.client.delete_object(
-                Bucket=bucketName(self._name),
+                Bucket=self.connection.name,
                 Key=self._idx2name(idx)
             )
             return True
@@ -226,6 +223,10 @@ class S3DataChunk(BackendDataChunk):
     @property
     def client(self):
         return self.dataset.client
+
+    @property
+    def connection(self):
+        return self.dataset.connection
 
     def get_data(self, slices=None):
         if slices is None:
@@ -248,7 +249,7 @@ class S3DataChunk(BackendDataChunk):
     def write_full(self, data):
 
         self.client.put_object(
-            Bucket=bucketName(self.dataset.name), Key=self.name, Body=data
+            Bucket=self.connection.name, Key=self.name, Body=data
         )
 
     def read(self, length=None, offset=0):
@@ -257,7 +258,7 @@ class S3DataChunk(BackendDataChunk):
 
         byteRange = 'bytes={}-{}'.format(offset, offset+length-1)
         return self.client.get_object(
-            Bucket=bucketName(self.dataset.name),
+            Bucket=self.connection.name,
             Key=self.name,
             Range=byteRange
         )['Body'].read()
