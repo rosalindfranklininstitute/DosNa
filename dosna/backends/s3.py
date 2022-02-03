@@ -108,10 +108,12 @@ class S3Connection(BackendConnection):
         return self._client
 
     def create_group(self, path, attrs={}):
-        raise NotImplementedError('implemented for this backend')
+        return self._root_group.create_group(path, attrs)
 
     def get_group(self, name):
-        raise NotImplementedError('implemented for this backend')
+        if name == _PATH_SPLIT:
+            return self._get_root_group()
+        return self._root_group.get_group(name)
 
     def has_group_object(self, name):
         try:
@@ -123,7 +125,7 @@ class S3Connection(BackendConnection):
         return valid
 
     def del_group(self, path):
-        raise NotImplementedError('implemented for this backend')
+        return self._root_group.del_group(path)
 
     def create_dataset(self, name, shape=None, dtype=np.float32, fillvalue=0,
                        data=None, chunk_size=None):
