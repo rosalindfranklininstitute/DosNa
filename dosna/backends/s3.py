@@ -229,7 +229,12 @@ class S3Group(BackendGroup):
         return self.connection.client
 
     def create_absolute_path(self, path):
-        raise NotImplementedError('implemented for this backend')
+        current_path = self.absolute_path
+        if current_path == self.path_split:
+            current_path = path
+        else:
+            current_path += path
+        return current_path
 
     def create_group(self, path, attrs={}):
         raise NotImplementedError('implemented for this backend')
