@@ -14,13 +14,22 @@ from dosna.backends.base import (BackendConnection, BackendDataChunk,
 from dosna.util import dtype2str, shape2str, str2shape, str2dict, dict2str
 from dosna.util.data import slices2shape
 
+_PATH_SPLIT = '/'
 _SIGNATURE = "DosNa Dataset"
+_SIGNATURE_GROUP = "DosNa Group"
+_SIGNATURE_LINK = "Dosna Link"
 _ENCODING = "utf-8"
 _SHAPE = 'shape'
 _DTYPE = 'dtype'
 _FILLVALUE = 'fillvalue'
 _CHUNK_GRID = 'chunk-grid'
 _CHUNK_SIZE = 'chunk-size'
+_NAME = "name"
+_ATTRS = "attrs"
+_ABSOLUTE_PATH = "absolute-path"
+_DATASETS = "datasets"
+_LINKS = "links"
+_PARENT = "parent"
 
 log = logging.getLogger(__name__)
 
@@ -63,13 +72,31 @@ class S3Connection(BackendConnection):
         )
         self._client.create_bucket(Bucket=self.name)
         super(S3Connection, self).connect()
+        if self.has_group_object(_PATH_SPLIT) == False:
+            self.create_root_group()
+        self._root_group = self._get_root_group()
 
 
     def create_root_group(self):
-        raise NotImplementedError('implemented for this backend')
+        metadata = {
+            _NAME: str(_PATH_SPLIT),
+            _ATTRS: str({}),
+            _ABSOLUTE_PATH: str(_PATH_SPLIT),
+            _DATASETS: str({}),
+            _LINKS: str({}),
+            _PARENT: str(_PATH_SPLIT)
+        }
+        self._client.put_object(
+            Bucket=self.name, Key=_PATH_SPLIT,
+            Body=_SIGNATURE_GROUP.encode(_ENCODING), Metadata=metadata
+        )
 
     def _get_root_group(self,):
-        raise NotImplementedError('implemented for this backend')
+        metadata = self._client.get_object(
+                Bucket=self.name, Key=_PATH_SPLIT
+            )['Metadata']
+        group = S3Group(self, metadata[_NAME], absolute_path=metadata[_ABSOLUTE_PATH])
+        return group
 
     def disconnect(self):
 
@@ -87,7 +114,13 @@ class S3Connection(BackendConnection):
         raise NotImplementedError('implemented for this backend')
 
     def has_group_object(self, name):
-        raise NotImplementedError('implemented for this backend')
+        try:
+            valid = self._client.get_object(
+                Bucket=self.name, Key=name
+            )['Body'].read() == _SIGNATURE_GROUP.encode(_ENCODING)
+        except Exception:  # Any exception it should return false
+            return False
+        return valid
 
     def del_group(self, path):
         raise NotImplementedError('implemented for this backend')

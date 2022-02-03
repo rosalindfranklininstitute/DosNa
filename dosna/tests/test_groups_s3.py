@@ -80,7 +80,7 @@ class GroupTest(unittest.TestCase):
 
     def test_root_group_exists(self):
         self.assertEqual(_SIGNATURE_GROUP,
-                         self.client.get_object(Bucket=self.connection_handle.name, Key=PATH_SPLIT)['Body'].read()
+                         self.client.get_object(Bucket=self.connection_handle.name, Key=PATH_SPLIT)['Body'].read().decode()
                          )
 
     def test_create_root_group(self):
