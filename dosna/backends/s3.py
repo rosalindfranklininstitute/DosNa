@@ -92,7 +92,7 @@ class S3Connection(BackendConnection):
         )
 
     def _get_root_group(self,):
-        metadata = self._client.get_object(
+        metadata = self._client.head_object(
                 Bucket=self.name, Key=_PATH_SPLIT
             )['Metadata']
         group = S3Group(self, metadata[_NAME], absolute_path=metadata[_ABSOLUTE_PATH])
@@ -172,7 +172,7 @@ class S3Connection(BackendConnection):
         if not self.has_dataset(name):
             raise DatasetNotFoundError('Dataset `%s` does not exist' % name)
 
-        metadata = self._client.get_object(
+        metadata = self._client.head_object(
                 Bucket=self.name, Key=name
             )['Metadata']
         if metadata is None:
@@ -286,7 +286,7 @@ class S3Group(BackendGroup):
 
     def _get_group_object(self, name):
         if self._has_group_object(name):
-            metadata = self.client.get_object(
+            metadata = self.client.head_object(
                 Bucket=self.connection.name, Key=name
             )['Metadata']
             group = S3Group(self, metadata[_NAME], absolute_path=metadata[_ABSOLUTE_PATH])
@@ -315,13 +315,19 @@ class S3Group(BackendGroup):
         raise NotImplementedError('implemented for this backend')
 
     def get_attrs(self):
-        raise NotImplementedError('implemented for this backend')
+        return str2dict(self.client.head_object(
+            Bucket=self.connection.name, Key=self.name
+        )['Metadata'][_ATTRS])
+
+    def set_attrs(self, attrs):
+        self.ioctx.set_xattr(self.name, "attrs", str(attrs).encode(_ENCODING))
+        return str2dict(self.ioctx.get_xattr(self.name, "attrs").decode())
 
     def set_attrs(self, attrs):
         raise NotImplementedError('implemented for this backend')
 
     def get_links(self):
-        links = str2dict(self.client.get_object(
+        links = str2dict(self.client.head_object(
             Bucket=self.connection.name, Key=self.name
         )['Metadata'][_LINKS])
         for key, value in links.items():
