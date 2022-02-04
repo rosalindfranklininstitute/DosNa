@@ -306,7 +306,10 @@ class S3Group(BackendGroup):
         return valid
 
     def _del_group_object(self, path):
-        raise NotImplementedError('implemented for this backend')
+        if self._has_group_object(path):
+            self.client.delete_object(Bucket=self.connection.name, Key=path)
+            return True
+        return False
 
     def del_group(self, path, root=None):
         raise NotImplementedError('implemented for this backend')
