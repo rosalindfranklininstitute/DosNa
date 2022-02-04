@@ -10,7 +10,7 @@ from botocore.exceptions import ClientError
 from dosna.backends import Backend
 from dosna.backends.base import (BackendConnection, BackendDataChunk,
                                  BackendDataset, BackendGroup, BackendLink, ConnectionError,
-                                 DatasetNotFoundError, GroupExistsError)
+                                 DatasetNotFoundError, GroupExistsError, GroupNotFoundError)
 from dosna.util import dtype2str, shape2str, str2shape, str2dict, dict2str
 from dosna.util.data import slices2shape
 
@@ -285,7 +285,13 @@ class S3Group(BackendGroup):
         raise NotImplementedError('implemented for this backend')
 
     def _get_group_object(self, name):
-        raise NotImplementedError('implemented for this backend')
+        if self._has_group_object(name):
+            metadata = self.client.get_object(
+                Bucket=self.connection.name, Key=name
+            )['Metadata']
+            group = S3Group(self, metadata[_NAME], absolute_path=metadata[_ABSOLUTE_PATH])
+            return group
+        raise GroupNotFoundError(name)
 
     def has_group(self, name):
         raise NotImplementedError('implemented for this backend')
