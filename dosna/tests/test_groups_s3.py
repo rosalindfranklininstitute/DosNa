@@ -208,9 +208,10 @@ class GroupTest(unittest.TestCase):
         self.assertFalse(root._has_group_object("/B/C"))
 
     def test__del_group_object(self):
-        groups = "A/B/C"
-        self.connection_handle.create_group(groups)
         root = self.connection_handle.get_group(PATH_SPLIT)
+        root._create_group_object("/A")
+        root._create_group_object("/A/B")
+        root._create_group_object("/A/B/C")
         self.assertTrue(root._del_group_object("/A/B/C"))
         with self.assertRaises(Exception):
             self.client.get_object(Bucket=self.connection_handle.name, Key="/A/B/C")['Body'].read()
