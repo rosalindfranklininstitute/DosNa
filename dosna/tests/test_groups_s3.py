@@ -9,7 +9,7 @@ import dosna as dn
 from dosna.engines.base import ParentDatasetError
 from dosna.util import str2dict
 from dosna.engines.cpu import CpuGroup, CpuLink, CpuDataset
-from dosna.backends.ceph import CephGroup, CephLink
+from dosna.backends.s3 import S3Group, S3Link
 from dosna.backends.base import (
     DatasetNotFoundError,
     GroupNotFoundError,
@@ -21,7 +21,12 @@ _SIGNATURE_GROUP = "DosNa Group"
 _SIGNATURE_LINK = "Dosna Link"
 _ENCODING = "utf-8"
 PATH_SPLIT = "/"
-
+_NAME = "name"
+_ATTRS = "attrs"
+_ABSOLUTE_PATH = "absolute-path"
+_DATASETS = "datasets"
+_LINKS = "links"
+_PARENT = "parent"
 
 class GroupTest(unittest.TestCase):
     """
@@ -59,12 +64,13 @@ class GroupTest(unittest.TestCase):
             Bucket=self.connection_handle.name, Key=name
         )['Metadata']
         self.assertEqual(_SIGNATURE_GROUP,
-                         self.client.get_object(Bucket=self.connection_handle.name, Key=name)['Body'].read()
+                         self.client.get_object(Bucket=self.connection_handle.name, Key=name)['Body'].read().decode()
                          )
-        self.assertEqual(group.name)
+        self.assertEqual(group.name, name)
+        self.assertEqual(group.name, metadata[_NAME])
 
         self.assertEqual(
-            group.absolute_path, metadata["absolute_path"]
+            group.absolute_path, metadata[_ABSOLUTE_PATH]
         )
         self.assertEqual(group.absolute_path, absolute_path)
 
@@ -94,13 +100,13 @@ class GroupTest(unittest.TestCase):
 
         A = root._create_group_object(name)
         # This should be a ceph group as it's access via a private method within CephGroup
-        self.assertEqual(type(A), CephGroup)
+        self.assertEqual(type(A), S3Group)
         self.check_group(A, name, name)
         attrs = {"A1": "V1"}
 
         A = root._create_group_object(name, attrs)
         # This should be a ceph group as it's access via a private method within CephGroup
-        self.assertEqual(type(A), CephGroup)
+        self.assertEqual(type(A), S3Group)
         self.check_group(A, name, name)
 
         # Check overwrites

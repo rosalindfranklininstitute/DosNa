@@ -226,7 +226,11 @@ class S3Group(BackendGroup):
 
     @property
     def client(self):
-        return self.connection.client
+        return self.parent.client
+
+    @property
+    def connection(self):
+        return self.parent
 
     def create_absolute_path(self, path):
         current_path = self.absolute_path
@@ -258,7 +262,24 @@ class S3Group(BackendGroup):
         raise NotImplementedError('implemented for this backend')
 
     def _create_group_object(self, path, attrs={}):
-        raise NotImplementedError('implemented for this backend')
+        attrs = {str(key): str(value) for key, value in attrs.items()}
+        absolute_path = self.create_absolute_path(path)
+
+        metadata = {
+            _NAME: str(path),
+            _ATTRS: str(attrs),
+            _ABSOLUTE_PATH: str(absolute_path),
+            _DATASETS: str({}),
+            _LINKS: str({}),
+            _PARENT: str(self.name)
+        }
+        self.client.put_object(
+            Bucket=self.connection.name, Key=path,
+            Body=_SIGNATURE_GROUP.encode(_ENCODING), Metadata=metadata
+        )
+        group = S3Group(self, path, absolute_path)
+        return group
+
 
     def get_group(self, path):
         raise NotImplementedError('implemented for this backend')
