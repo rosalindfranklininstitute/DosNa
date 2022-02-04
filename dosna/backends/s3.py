@@ -291,7 +291,13 @@ class S3Group(BackendGroup):
         raise NotImplementedError('implemented for this backend')
 
     def _has_group_object(self, name):
-        raise NotImplementedError('implemented for this backend')
+        try:
+            valid = self.client.get_object(
+                Bucket=self.connection.name, Key=name
+            )['Body'].read() == _SIGNATURE_GROUP.encode(_ENCODING)
+        except Exception:  # Any exception it should return false
+            return False
+        return valid
 
     def _del_group_object(self, path):
         raise NotImplementedError('implemented for this backend')
