@@ -103,13 +103,13 @@ class GroupTest(unittest.TestCase):
         self.assertEqual(type(root), CpuGroup)
 
         A = root._create_group_object(name)
-        # This should be a ceph group as it's access via a private method within CephGroup
+        # This should be a s3 group as it's access via a private method within S3Group
         self.assertEqual(type(A), S3Group)
         self.check_group(A, name, name)
         attrs = {"A1": "V1"}
 
         A = root._create_group_object(name, attrs)
-        # This should be a ceph group as it's access via a private method within CephGroup
+        # This should be a s3 group as it's access via a private method within S3Group
         self.assertEqual(type(A), S3Group)
         self.check_group(A, name, name)
 
@@ -266,10 +266,9 @@ class GroupTest(unittest.TestCase):
         name = "/A"
         root = self.connection_handle.get_group(PATH_SPLIT)
         self.assertEqual(type(root), CpuGroup)
-        A = root.create_group(name)
-        self.assertEqual(type(A), CpuGroup)
+        root._create_group_object(name)
         A_get = root._get_group_object(name)
-        self.assertEqual(type(A_get), CephGroup)
+        self.assertEqual(type(A_get), S3Group)
         self.check_group(A_get, name, name)
         with self.assertRaises(GroupNotFoundError):
             root._get_group_object("/B")
