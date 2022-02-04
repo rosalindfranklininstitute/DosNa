@@ -321,7 +321,19 @@ class S3Group(BackendGroup):
         raise NotImplementedError('implemented for this backend')
 
     def get_links(self):
-        raise NotImplementedError('implemented for this backend')
+        links = str2dict(self.client.get_object(
+            Bucket=self.connection.name, Key=self.name
+        )['Metadata'][_LINKS])
+        for key, value in links.items():
+            path = value["name"]
+            source = value["source"]
+            target = value["target"]
+            if self.has_group(value["target"]):
+                links[key] = S3Link(source, target, path)
+            else:
+                target = None
+                links[key] = S3Link(source, target, path)
+        return links
 
     def create_dataset(self, name, shape=None, dtype=np.float32, fillvalue=0,
                        data=None, chunk_size=None):
