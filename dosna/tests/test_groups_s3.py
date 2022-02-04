@@ -57,6 +57,10 @@ class GroupTest(unittest.TestCase):
         if dn.get_backend().name == "ceph":
             for obj in self.connection_handle.client.list_objects():
                 self.connection_handle.client.remove_object(obj.key)
+        if dn.get_backend().name == "s3":
+            contents = self.client.list_objects(Bucket=self.connection_handle.name)['Contents']
+            for obj in contents:
+                self.client.delete_object(Bucket=self.connection_handle.name, Key=obj['Key'])
         self.connection_handle.disconnect()
 
     def check_group(self, group, name, absolute_path):
@@ -192,9 +196,11 @@ class GroupTest(unittest.TestCase):
             group_obj = A.create_group(group_name)
 
     def test__has_group_object(self):
-        groups = "A/B/C"
-        self.connection_handle.create_group(groups)
         root = self.connection_handle.get_group(PATH_SPLIT)
+        root._create_group_object("/A")
+        root._create_group_object("/A/B")
+        root._create_group_object("/A/B/C")
+
         self.assertTrue(root._has_group_object("/A"))
         self.assertTrue(root._has_group_object("/A/B"))
         self.assertTrue(root._has_group_object("/A/B/C"))
