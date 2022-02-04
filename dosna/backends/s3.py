@@ -320,11 +320,20 @@ class S3Group(BackendGroup):
         )['Metadata'][_ATTRS])
 
     def set_attrs(self, attrs):
-        self.ioctx.set_xattr(self.name, "attrs", str(attrs).encode(_ENCODING))
-        return str2dict(self.ioctx.get_xattr(self.name, "attrs").decode())
+        header = self.client.head_object(
+            Bucket=self.connection.name, Key=self.name
+        )
+        metadata = header["Metadata"]
+        metadata[_ATTRS] = str(attrs)
+        self.client.copy_object(Bucket=self.connection.name, Key=self.name,
+                       CopySource={"Bucket": self.connection.name, "Key": self.name},
+                       Metadata=metadata,
+                        MetadataDirective="REPLACE",
+                       CopySourceIfMatch=header["ETag"])
+        return str2dict(self.client.head_object(
+            Bucket=self.connection.name, Key=self.name
+        )['Metadata'][_ATTRS])
 
-    def set_attrs(self, attrs):
-        raise NotImplementedError('implemented for this backend')
 
     def get_links(self):
         links = str2dict(self.client.head_object(
