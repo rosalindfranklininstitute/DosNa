@@ -539,7 +539,25 @@ class S3Group(BackendGroup):
         return dataset
 
     def _get_dataset(self, name):
-        raise NotImplementedError('implemented for this backend')
+        metadata = self.client.head_object(
+            Bucket=self.bucket_name, Key=name
+        )['Metadata']
+        if metadata is None:
+            raise DatasetNotFoundError(
+                'Dataset `%s` does not have required DosNa metadata' % name
+            )
+
+        shape = str2shape(metadata[_SHAPE])
+        dtype = metadata[_DTYPE]
+        fillvalue = int(metadata[_FILLVALUE])
+        chunk_grid = str2shape(metadata[_CHUNK_GRID])
+        chunk_size = str2shape(metadata[_CHUNK_SIZE])
+        dataset = S3Dataset(
+            self, name, shape, dtype, fillvalue,
+            chunk_grid, chunk_size
+        )
+
+        return dataset
 
     def has_dataset(self, name):
         if name in str2dict(self.client.head_object(
@@ -549,16 +567,25 @@ class S3Group(BackendGroup):
         return False
 
     def get_datasets(self):
-        return {}
+        datasets = str2dict(self.client.head_object(
+            Bucket=self.bucket_name, Key=self.name
+        )['Metadata'][_DATASETS])
+        return datasets
 
     def get_dataset(self, name):
-        raise NotImplementedError('implemented for this backend')
+        if not self.has_dataset(name):
+            raise DatasetNotFoundError('Dataset `%s` does not exist' % name)
+        if not self._has_dataset_object(name):
+            return None
+        return self._get_dataset(name)
 
     def del_dataset(self, name):
         raise NotImplementedError('implemented for this backend')
 
     def _get_dataset_object(self, name):
-        raise NotImplementedError('implemented for this backend')
+        if not self._has_dataset_object(name):
+            raise DatasetNotFoundError('Dataset `%s` does not exist' % name)
+        return self._get_dataset(name)
 
     def _has_dataset_object(self, name):
         try:
