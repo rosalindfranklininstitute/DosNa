@@ -358,18 +358,18 @@ class GroupTest(unittest.TestCase):
         data1 = root.create_dataset("data", data=data, chunk_size=(32, 32, 32))
         path = root.name + "data"
         self.assertEqual(type(data1), CpuDataset)
-        self.assertEqual(_SIGNATURE, self.client.get_object(Bucket=self.connection_handle.name, Key=path)['Body'].read())
+        self.assertEqual(_SIGNATURE, self.client.get_object(Bucket=self.connection_handle.name, Key=path)['Body'].read().decode())
         self.assertIsNone(assert_array_equal(data, data1[:]))
         data_path = "/dset1"
         dset1 = root.create_dataset(data_path, data=data)
         self.assertEqual(type(dset1), CpuDataset)
-        self.assertEqual(_SIGNATURE, self.client.get_object(Bucket=self.connection_handle.name, Key=path)['Body'].read())
+        self.assertEqual(_SIGNATURE, self.client.get_object(Bucket=self.connection_handle.name, Key=path)['Body'].read().decode())
         self.assertIsNone(assert_array_equal(data, dset1[:]))
         A = root.create_group(grp)
         A_data = A.create_dataset("data", data=data)
         path = A.name + PATH_SPLIT + "data"
         self.assertEqual(type(A_data), CpuDataset)
-        self.assertEqual(_SIGNATURE, self.client.get_object(Bucket=self.connection_handle.name, Key=path)['Body'].read())
+        self.assertEqual(_SIGNATURE, self.client.get_object(Bucket=self.connection_handle.name, Key=path)['Body'].read().decode())
         self.assertIsNone(assert_array_equal(data, A_data[:]))
         with self.assertRaises(DatasetExistsError):
             A.create_dataset("data", data=data)
@@ -379,7 +379,7 @@ class GroupTest(unittest.TestCase):
         data_path = "/A/dset1"
         A_dset1 = A.create_dataset(data_path, data=data)
         self.assertEqual(type(A_dset1), CpuDataset)
-        self.assertEqual(_SIGNATURE, self.client.get_object(Bucket=self.connection_handle.name, Key=data_path)['Body'].read())
+        # self.assertEqual(_SIGNATURE, self.client.get_object(Bucket=self.connection_handle.name, Key=data_path)['Body'].read())
         self.assertIsNone(assert_array_equal(data, A_dset1[:]))
 
     def test__has_dataset_object(self):
