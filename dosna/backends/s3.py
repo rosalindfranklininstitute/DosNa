@@ -365,7 +365,13 @@ class S3Group(BackendGroup):
         raise GroupNotFoundError(name)
 
     def has_group(self, name):
-        raise NotImplementedError('implemented for this backend')
+        try:
+            valid = self.client.get_object(
+                Bucket=self.bucket_name, Key=name
+            )['Body'].read() == _SIGNATURE_GROUP.encode(_ENCODING)
+        except Exception:  # Any exception it should return false
+            return False
+        return valid
 
     def _has_group_object(self, name):
         try:
@@ -384,7 +390,7 @@ class S3Group(BackendGroup):
             parent = header['Metadata'][_PARENT]
             if self._has_group_object(parent):
                 parent_head = self.client.head_object(
-                    Bucket=self.bucket_name, Key=path
+                    Bucket=self.bucket_name, Key=parent
                 )
                 links = str2dict(parent_head['Metadata'][_LINKS])
                 del links[path]
@@ -399,7 +405,29 @@ class S3Group(BackendGroup):
         return False
 
     def del_group(self, path, root=None):
-        raise NotImplementedError('implemented for this backend')
+        def del_sub_group(node, root, datasets):
+            links = node.get_links()
+            for link in links:
+                node = self._get_group_object(link)
+                del_sub_group(node, root, datasets)
+                if node.absolute_path[:len(root.absolute_path) + 1] == root.name + root.path_split:
+                    if node.get_datasets() is not {}:
+                        for data in node.get_datasets():
+                            if data[:len(node.name) + 1] == node.name + self.path_split:
+                                datasets.append(data)
+                    root._del_group_object(node.name)
+
+        if self._has_group_object(path):
+            datasets = []
+            root = self._get_group_object(path)
+            del_sub_group(root, root, datasets)
+            if root.get_datasets() is not {}:
+                for key in root.get_datasets():
+                    if key[:len(root.name) + 1] == root.name + self.path_split:
+                        datasets.append(key)
+            self._del_group_object(path)
+            return datasets
+        raise GroupNotFoundError(path)
 
     def get_attrs(self):
         return str2dict(self.client.head_object(
@@ -465,7 +493,7 @@ class S3Group(BackendGroup):
         raise NotImplementedError('implemented for this backend')
 
     def get_datasets(self):
-        raise NotImplementedError('implemented for this backend')
+        return {}
 
     def get_dataset(self, name):
         raise NotImplementedError('implemented for this backend')
