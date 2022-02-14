@@ -107,6 +107,10 @@ class S3Connection(BackendConnection):
     def client(self):
         return self._client
 
+    @property
+    def bucket_name(self):
+        return self.name
+
     def create_group(self, path, attrs={}):
         return self._root_group.create_group(path, attrs)
 
@@ -229,8 +233,8 @@ class S3Group(BackendGroup):
         return self.parent.client
 
     @property
-    def connection(self):
-        return self.parent
+    def bucket_name(self):
+        return self.parent.bucket_name
 
     def create_absolute_path(self, path):
         current_path = self.absolute_path
@@ -241,11 +245,31 @@ class S3Group(BackendGroup):
         return current_path
 
     def create_group(self, path, attrs={}):
-        raise NotImplementedError('implemented for this backend')
+        def _create_subgroup(path, group, attrs={}):
+            path_elements = path.split(self.path_split)
+            for i in range(len(path_elements) - 2, 0, -1):
+                parent = "/".join(path_elements[:-i])
+                if group.name == parent:
+                    group = group
+                elif group._has_group_object(parent):
+                    group = group._get_group_object(parent)
+                else:
+                    group = group._create_group_object(parent)
+            group = group._create_group_object(path, attrs)
+            return group
+
+        if path[0] != "/":
+            path = "/" + path
+        if self.name != self.path_split:
+            path = self.name + path
+        if self._has_group_object(path):
+            raise GroupExistsError(path)
+        group = _create_subgroup(path, self, attrs)
+        return group
 
     def _create_group_link(self, path):
         header = self.client.head_object(
-            Bucket=self.connection.name, Key=self.name
+            Bucket=self.bucket_name, Key=self.name
         )
         metadata = header["Metadata"]
         links = str2dict(metadata[_LINKS])
@@ -253,9 +277,9 @@ class S3Group(BackendGroup):
         links[path] = {"name": link_name,
                        "source": self.name,
                        "target": path}
-        metadata[_LINKS] = str2dict(links)
-        self.client.copy_object(Bucket=self.connection.name, Key=self.name,
-                                CopySource={"Bucket": self.connection.name, "Key": self.name},
+        metadata[_LINKS] = str(links)
+        self.client.copy_object(Bucket=self.bucket_name, Key=self.name,
+                                CopySource={"Bucket": self.bucket_name, "Key": self.name},
                                 Metadata=metadata,
                                 MetadataDirective="REPLACE",
                                 CopySourceIfMatch=header["ETag"])
@@ -291,11 +315,11 @@ class S3Group(BackendGroup):
             _PARENT: str(self.name)
         }
         self.client.put_object(
-            Bucket=self.connection.name, Key=path,
+            Bucket=self.bucket_name, Key=path,
             Body=_SIGNATURE_GROUP.encode(_ENCODING), Metadata=metadata
         )
         group = S3Group(self, path, absolute_path)
-
+        self.create_link(path)
         return group
 
 
@@ -305,7 +329,7 @@ class S3Group(BackendGroup):
     def _get_group_object(self, name):
         if self._has_group_object(name):
             metadata = self.client.head_object(
-                Bucket=self.connection.name, Key=name
+                Bucket=self.bucket_name, Key=name
             )['Metadata']
             group = S3Group(self, metadata[_NAME], absolute_path=metadata[_ABSOLUTE_PATH])
             return group
@@ -317,7 +341,7 @@ class S3Group(BackendGroup):
     def _has_group_object(self, name):
         try:
             valid = self.client.get_object(
-                Bucket=self.connection.name, Key=name
+                Bucket=self.bucket_name, Key=name
             )['Body'].read() == _SIGNATURE_GROUP.encode(_ENCODING)
         except Exception:  # Any exception it should return false
             return False
@@ -325,7 +349,7 @@ class S3Group(BackendGroup):
 
     def _del_group_object(self, path):
         if self._has_group_object(path):
-            self.client.delete_object(Bucket=self.connection.name, Key=path)
+            self.client.delete_object(Bucket=self.bucket_name, Key=path)
             return True
         return False
 
@@ -334,34 +358,34 @@ class S3Group(BackendGroup):
 
     def get_attrs(self):
         return str2dict(self.client.head_object(
-            Bucket=self.connection.name, Key=self.name
+            Bucket=self.bucket_name, Key=self.name
         )['Metadata'][_ATTRS])
 
     def set_attrs(self, attrs):
         header = self.client.head_object(
-            Bucket=self.connection.name, Key=self.name
+            Bucket=self.bucket_name, Key=self.name
         )
         metadata = header["Metadata"]
         metadata[_ATTRS] = str(attrs)
-        self.client.copy_object(Bucket=self.connection.name, Key=self.name,
-                       CopySource={"Bucket": self.connection.name, "Key": self.name},
-                       Metadata=metadata,
-                        MetadataDirective="REPLACE",
-                       CopySourceIfMatch=header["ETag"])
+        self.client.copy_object(Bucket=self.bucket_name, Key=self.name,
+                                CopySource={"Bucket": self.bucket_name, "Key": self.name},
+                                Metadata=metadata,
+                                MetadataDirective="REPLACE",
+                                CopySourceIfMatch=header["ETag"])
         return str2dict(self.client.head_object(
-            Bucket=self.connection.name, Key=self.name
+            Bucket=self.bucket_name, Key=self.name
         )['Metadata'][_ATTRS])
 
 
     def get_links(self):
         links = str2dict(self.client.head_object(
-            Bucket=self.connection.name, Key=self.name
+            Bucket=self.bucket_name, Key=self.name
         )['Metadata'][_LINKS])
         for key, value in links.items():
             path = value["name"]
             source = value["source"]
             target = value["target"]
-            if self.has_group(value["target"]):
+            if self._has_group_object(value["target"]):
                 links[key] = S3Link(source, target, path)
             else:
                 target = None
@@ -463,7 +487,7 @@ class S3DataChunk(BackendDataChunk):
 
     @property
     def connection(self):
-        return self.dataset.connection
+        return self.dataset.bucket_name
 
     def get_data(self, slices=None):
         if slices is None:
