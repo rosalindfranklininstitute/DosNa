@@ -324,7 +324,20 @@ class S3Group(BackendGroup):
 
 
     def get_group(self, path):
-        raise NotImplementedError('implemented for this backend')
+        def _find_group(path):
+            group = self
+            for i in range(1, len(path)+1):
+                links = group.get_links()
+                link_path = self.path_split.join(path[:i])
+                if link_path in links:
+                    group = group._get_group_object(link_path)
+            return group
+
+        path_elements = path.split(self.path_split)
+        group = _find_group(path_elements)
+        if group == self or group.name != path:
+            raise GroupNotFoundError(path)
+        return group
 
     def _get_group_object(self, name):
         if self._has_group_object(name):
