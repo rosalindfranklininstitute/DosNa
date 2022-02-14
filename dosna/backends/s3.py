@@ -244,13 +244,30 @@ class S3Group(BackendGroup):
         raise NotImplementedError('implemented for this backend')
 
     def _create_group_link(self, path):
-        raise NotImplementedError('implemented for this backend')
+        header = self.client.head_object(
+            Bucket=self.connection.name, Key=self.name
+        )
+        metadata = header["Metadata"]
+        links = str2dict(metadata[_LINKS])
+        link_name = self.name + "->" + path
+        links[path] = {"name": link_name,
+                       "source": self.name,
+                       "target": path}
+        metadata[_LINKS] = str2dict(links)
+        self.client.copy_object(Bucket=self.connection.name, Key=self.name,
+                                CopySource={"Bucket": self.connection.name, "Key": self.name},
+                                Metadata=metadata,
+                                MetadataDirective="REPLACE",
+                                CopySourceIfMatch=header["ETag"])
 
     def _create_dataset_link(self, path):
         raise NotImplementedError('implemented for this backend')
 
     def create_link(self, path):
-        raise NotImplementedError('implemented for this backend')
+        if self._has_group_object(path):
+            self._create_group_link(path)
+            return True
+        return False
 
     def _del_group_link(self, name):
         raise NotImplementedError('implemented for this backend')
@@ -278,6 +295,7 @@ class S3Group(BackendGroup):
             Body=_SIGNATURE_GROUP.encode(_ENCODING), Metadata=metadata
         )
         group = S3Group(self, path, absolute_path)
+
         return group
 
 
