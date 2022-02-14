@@ -71,7 +71,6 @@ class S3Connection(BackendConnection):
             endpoint_url=self._endpoint_url,
             verify=self._verify
         )
-
         self._client.create_bucket(Bucket=self.name)
         super(S3Connection, self).connect()
         if self.has_group_object(_PATH_SPLIT) == False:
@@ -543,7 +542,11 @@ class S3Group(BackendGroup):
         raise NotImplementedError('implemented for this backend')
 
     def has_dataset(self, name):
-        raise NotImplementedError('implemented for this backend')
+        if name in str2dict(self.client.head_object(
+            Bucket=self.bucket_name, Key=self.name
+        )['Metadata'][_DATASETS]):
+            return True
+        return False
 
     def get_datasets(self):
         return {}
