@@ -10,7 +10,8 @@ from botocore.exceptions import ClientError
 from dosna.backends import Backend
 from dosna.backends.base import (BackendConnection, BackendDataChunk,
                                  BackendDataset, BackendGroup, BackendLink, ConnectionError,
-                                 DatasetNotFoundError, GroupExistsError, GroupNotFoundError, ParentLinkError)
+                                 DatasetNotFoundError, GroupExistsError, GroupNotFoundError, ParentLinkError,
+                                 DatasetExistsError)
 from dosna.util import dtype2str, shape2str, str2shape, str2dict, dict2str
 from dosna.util.data import slices2shape
 
@@ -70,6 +71,7 @@ class S3Connection(BackendConnection):
             endpoint_url=self._endpoint_url,
             verify=self._verify
         )
+
         self._client.create_bucket(Bucket=self.name)
         super(S3Connection, self).connect()
         if self.has_group_object(_PATH_SPLIT) == False:
@@ -480,11 +482,62 @@ class S3Group(BackendGroup):
             Bucket=self.bucket_name, Key=self.name
         )['Metadata'][_LINKS])
 
-
-
     def create_dataset(self, name, shape=None, dtype=np.float32, fillvalue=0,
                        data=None, chunk_size=None):
-        raise NotImplementedError('implemented for this backend')
+        if not ((shape is not None and dtype is not None) or data is not None):
+            raise Exception('Provide `shape` and `dtype` or `data`')
+        if self.name == self.path_split:
+            if name[0] != self.path_split:
+                name = self.name + name
+        elif name[:len(self.name) + 1] != self.name + self.path_split:
+            name = self.name + self.path_split + name
+        if self._has_dataset_object(name):
+            raise DatasetExistsError(name)
+
+        if data is not None:
+            shape = data.shape
+            dtype = data.dtype
+
+        if chunk_size is None:
+            chunk_size = shape
+
+        chunk_grid = (np.ceil(np.asarray(shape, float) / chunk_size)) \
+            .astype(int)
+
+        log.debug('creating dataset %s with shape:%s chunk_size:%s '
+                  'chunk_grid:%s', name, shape, chunk_size, chunk_grid)
+        metadata = {
+            _SHAPE: shape2str(shape),
+            _DTYPE: dtype2str(dtype),
+            _FILLVALUE: repr(fillvalue),
+            _CHUNK_GRID: shape2str(chunk_grid),
+            _CHUNK_SIZE: shape2str(chunk_size)
+        }
+        self.client.put_object(
+            Bucket=self.bucket_name, Key=name,
+            Body=_SIGNATURE.encode(_ENCODING), Metadata=metadata
+        )
+
+        dataset = S3Dataset(
+            self, name, shape, dtype,
+            fillvalue, chunk_grid, chunk_size
+        )
+
+        header = self.client.head_object(
+            Bucket=self.bucket_name, Key=self.name
+        )
+        metadata = header["Metadata"]
+        datasets = str2dict(metadata[_DATASETS])
+        dataset_name = name
+        datasets[dataset_name] = dataset_name
+        metadata[_DATASETS] = dict2str(datasets)
+
+        self.client.copy_object(Bucket=self.bucket_name, Key=self.name,
+                                CopySource={"Bucket": self.bucket_name, "Key": self.name},
+                                Metadata=metadata,
+                                MetadataDirective="REPLACE",
+                                CopySourceIfMatch=header["ETag"])
+        return dataset
 
     def _get_dataset(self, name):
         raise NotImplementedError('implemented for this backend')
@@ -505,7 +558,13 @@ class S3Group(BackendGroup):
         raise NotImplementedError('implemented for this backend')
 
     def _has_dataset_object(self, name):
-        raise NotImplementedError('implemented for this backend')
+        try:
+            valid = self.client.get_object(
+                Bucket=self.bucket_name, Key=name
+            )['Body'].read() == _SIGNATURE.encode(_ENCODING)
+        except Exception:  # Any exception it should return false
+            return False
+        return valid
 
     def _del_dataset_object(self, name):
         raise NotImplementedError('implemented for this backend')
@@ -519,6 +578,10 @@ class S3Dataset(BackendDataset):
     @property
     def client(self):
         return self.connection.client
+
+    @property
+    def bucket_name(self):
+        return self.connection.bucket_name
 
     def _idx2name(self, idx):
         return '{}/{}'.format(self.name, '.'.join(map(str, idx)))
@@ -552,7 +615,7 @@ class S3Dataset(BackendDataset):
         has_chunk = False
         name = self._idx2name(idx)
         try:
-            self.client.head_object(Bucket=self.connection.name, Key=name)
+            self.client.head_object(Bucket=self.bucket_name, Key=name)
             has_chunk = True
         except ClientError as e:
             logging.debug("ClientError: %s", e.response['Error']['Code'])
@@ -576,7 +639,7 @@ class S3DataChunk(BackendDataChunk):
         return self.dataset.client
 
     @property
-    def connection(self):
+    def bucket_name(self):
         return self.dataset.bucket_name
 
     def get_data(self, slices=None):
@@ -600,7 +663,7 @@ class S3DataChunk(BackendDataChunk):
     def write_full(self, data):
 
         self.client.put_object(
-            Bucket=self.connection.name, Key=self.name, Body=data
+            Bucket=self.bucket_name, Key=self.name, Body=data
         )
 
     def read(self, length=None, offset=0):
@@ -609,7 +672,7 @@ class S3DataChunk(BackendDataChunk):
 
         byteRange = 'bytes={}-{}'.format(offset, offset+length-1)
         return self.client.get_object(
-            Bucket=self.connection.name,
+            Bucket=self.bucket_name,
             Key=self.name,
             Range=byteRange
         )['Body'].read()
