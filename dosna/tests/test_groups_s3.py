@@ -1,6 +1,7 @@
 import time
 import unittest
-import rados
+from botocore.exceptions import ClientError
+
 
 import numpy as np
 from numpy.testing import assert_array_equal
@@ -550,13 +551,13 @@ class GroupTest(unittest.TestCase):
         C_dset = C.create_dataset("data", data=data)
         A_dset = A.create_dataset("data", data=data)
         root.del_group(A.name)
-        with self.assertRaises(Exception):
+        with self.assertRaises(ClientError):
             self.client.get_object(Bucket=self.connection_handle.name, Key="/A/data")['Body'].read()
-        with self.assertRaises(Exception):
+        with self.assertRaises(ClientError):
             self.client.get_object(Bucket=self.connection_handle.name, Key="/A/B/C/data")['Body'].read()
-        with self.assertRaises(rados.ObjectNotFound):
+        with self.assertRaises(ClientError):
             self.client.get_object(Bucket=self.connection_handle.name, Key="/A/data/0.0.0")['Body'].read()
-        with self.assertRaises(rados.ObjectNotFound):
+        with self.assertRaises(ClientError):
             self.client.get_object(Bucket=self.connection_handle.name, Key="/A/B/C/data/0.0.0")['Body'].read()
 
     def test_del_linked_dataset(self):
