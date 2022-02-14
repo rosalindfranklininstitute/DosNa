@@ -286,11 +286,26 @@ class S3Group(BackendGroup):
                                 CopySourceIfMatch=header["ETag"])
 
     def _create_dataset_link(self, path):
-        raise NotImplementedError('implemented for this backend')
+        header = self.client.head_object(
+            Bucket=self.bucket_name, Key=self.name
+        )
+        metadata = header["Metadata"]
+        datasets = str2dict(metadata[_DATASETS])
+        datasets[path] = path
+        metadata[_DATASETS] = dict2str(datasets)
+        self.client.copy_object(Bucket=self.bucket_name, Key=self.name,
+                                CopySource={"Bucket": self.bucket_name, "Key": self.name},
+                                Metadata=metadata,
+                                MetadataDirective="REPLACE",
+                                CopySourceIfMatch=header["ETag"])
+        return datasets
 
     def create_link(self, path):
         if self._has_group_object(path):
             self._create_group_link(path)
+            return True
+        elif self._has_dataset_object(path):
+            self._create_dataset_link(path)
             return True
         return False
 
@@ -311,11 +326,33 @@ class S3Group(BackendGroup):
         raise GroupNotFoundError(self.name)
 
     def _del_dataset_link(self, name):
-        raise NotImplementedError('implemented for this backend')
+        header = self.client.head_object(
+            Bucket=self.bucket_name, Key=self.name
+        )
+        metadata = header["Metadata"]
+        datasets = str2dict(metadata[_DATASETS])
+        if name in datasets:
+            if self.name == self.path_split:
+                if name[:len(self.name)] == self.name:
+                    raise ParentLinkError(self.name, name)
+            elif name[:len(self.name) + 1] == self.name + self.path_split:
+                raise ParentLinkError(self.name, name)
+            del datasets[name]
+            metadata[_DATASETS] = dict2str(datasets)
+            self.client.copy_object(Bucket=self.bucket_name, Key=self.name,
+                                    CopySource={"Bucket": self.bucket_name, "Key": self.name},
+                                    Metadata=metadata,
+                                    MetadataDirective="REPLACE",
+                                    CopySourceIfMatch=header["ETag"])
+            return datasets
+        raise DatasetNotFoundError(name)
 
     def del_link(self, name):
         if self._has_group_object(name):
             self._del_group_link(name)
+            return True
+        elif self._has_dataset_object(name):
+            self._del_dataset_link(name)
             return True
         return False
 
