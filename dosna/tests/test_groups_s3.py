@@ -278,7 +278,7 @@ class GroupTest(unittest.TestCase):
         name = "/A"
         root = self.connection_handle.get_group(PATH_SPLIT)
         root.create_group(name)
-        root_link = CpuLink(CephLink("/", "/A", "/->/A"))
+        root_link = CpuLink(S3Link("/", "/A", "/->/A"))
         links = {"/A": root_link}
         for link in links:
             self.assertEqual(type(links[link]), type(root.get_links()[link]))
