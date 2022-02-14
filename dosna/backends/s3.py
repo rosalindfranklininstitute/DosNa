@@ -580,7 +580,23 @@ class S3Group(BackendGroup):
         return self._get_dataset(name)
 
     def del_dataset(self, name):
-        raise NotImplementedError('implemented for this backend')
+        if self.has_dataset(name):
+            self.client.delete_object(Bucket=self.bucket_name, Key=name)
+            header = self.client.head_object(
+                Bucket=self.bucket_name, Key=self.name
+            )
+            metadata = header["Metadata"]
+            datasets = str2dict(metadata[_DATASETS])
+            del datasets[name]
+            metadata[_DATASETS] = dict2str(datasets)
+            self.client.copy_object(Bucket=self.bucket_name, Key=self.name,
+                                    CopySource={"Bucket": self.bucket_name, "Key": self.name},
+                                    Metadata=metadata,
+                                    MetadataDirective="REPLACE",
+                                    CopySourceIfMatch=header["ETag"])
+        else:
+            raise DatasetNotFoundError(
+                'Dataset `{}` does not exist'.format(name))
 
     def _get_dataset_object(self, name):
         if not self._has_dataset_object(name):
@@ -597,7 +613,15 @@ class S3Group(BackendGroup):
         return valid
 
     def _del_dataset_object(self, name):
-        raise NotImplementedError('implemented for this backend')
+        if self._has_dataset_object(name):
+            try:
+                self.client.delete_object(Bucket=self.bucket_name, Key=name)
+            except ClientError as e:
+                log.error('del_dataset: cannot delete %s: %s',
+                          name, e.response['Error'])
+        else:
+            raise DatasetNotFoundError(
+                'Dataset `{}` does not exist'.format(name))
 
 
 class S3Dataset(BackendDataset):
@@ -655,7 +679,7 @@ class S3Dataset(BackendDataset):
     def del_chunk(self, idx):
         if self.has_chunk(idx):
             self.client.delete_object(
-                Bucket=self.connection.name,
+                Bucket=self.bucket_name,
                 Key=self._idx2name(idx)
             )
             return True
