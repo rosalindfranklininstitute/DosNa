@@ -10,7 +10,7 @@ from botocore.exceptions import ClientError
 from dosna.backends import Backend
 from dosna.backends.base import (BackendConnection, BackendDataChunk,
                                  BackendDataset, BackendGroup, BackendLink, ConnectionError,
-                                 DatasetNotFoundError, GroupExistsError, GroupNotFoundError)
+                                 DatasetNotFoundError, GroupExistsError, GroupNotFoundError, ParentLinkError)
 from dosna.util import dtype2str, shape2str, str2shape, str2dict, dict2str
 from dosna.util.data import slices2shape
 
@@ -294,13 +294,29 @@ class S3Group(BackendGroup):
         return False
 
     def _del_group_link(self, name):
-        raise NotImplementedError('implemented for this backend')
+        links = str2dict(self.client.head_object(
+                Bucket=self.bucket_name, Key=self.name
+            )['Metadata'][_LINKS])
+        if name in links:
+            header = self.client.head_object(
+                Bucket=self.bucket_name, Key=name
+            )
+            link_parent = header['Metadata'][_PARENT]
+            if link_parent != self.name:
+                del links[name]
+                self.set_links(links)
+                return links
+            raise ParentLinkError(self.name, name)
+        raise GroupNotFoundError(self.name)
 
     def _del_dataset_link(self, name):
         raise NotImplementedError('implemented for this backend')
 
     def del_link(self, name):
-        raise NotImplementedError('implemented for this backend')
+        if self._has_group_object(name):
+            self._del_group_link(name)
+            return True
+        return False
 
     def _create_group_object(self, path, attrs={}):
         attrs = {str(key): str(value) for key, value in attrs.items()}
@@ -362,6 +378,22 @@ class S3Group(BackendGroup):
 
     def _del_group_object(self, path):
         if self._has_group_object(path):
+            header = self.client.head_object(
+                Bucket=self.bucket_name, Key=path
+            )
+            parent = header['Metadata'][_PARENT]
+            if self._has_group_object(parent):
+                parent_head = self.client.head_object(
+                    Bucket=self.bucket_name, Key=path
+                )
+                links = str2dict(parent_head['Metadata'][_LINKS])
+                del links[path]
+                parent_head['Metadata'][_LINKS] = dict2str(links)
+                self.client.copy_object(Bucket=self.bucket_name, Key=parent,
+                                        CopySource={"Bucket": self.bucket_name, "Key": parent},
+                                        Metadata=parent_head['Metadata'],
+                                        MetadataDirective="REPLACE",
+                                        CopySourceIfMatch=header["ETag"])
             self.client.delete_object(Bucket=self.bucket_name, Key=path)
             return True
         return False
@@ -404,6 +436,23 @@ class S3Group(BackendGroup):
                 target = None
                 links[key] = S3Link(source, target, path)
         return links
+
+    def set_links(self, links):
+        header = self.client.head_object(
+            Bucket=self.bucket_name, Key=self.name
+        )
+        metadata = header["Metadata"]
+        metadata[_LINKS] = str(links)
+        self.client.copy_object(Bucket=self.bucket_name, Key=self.name,
+                                CopySource={"Bucket": self.bucket_name, "Key": self.name},
+                                Metadata=metadata,
+                                MetadataDirective="REPLACE",
+                                CopySourceIfMatch=header["ETag"])
+        return str2dict(self.client.head_object(
+            Bucket=self.bucket_name, Key=self.name
+        )['Metadata'][_LINKS])
+
+
 
     def create_dataset(self, name, shape=None, dtype=np.float32, fillvalue=0,
                        data=None, chunk_size=None):
