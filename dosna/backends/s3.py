@@ -103,9 +103,7 @@ class S3Connection(BackendConnection):
             Metadata=metadata,
         )
 
-    def _get_root_group(
-        self,
-    ):
+    def _get_root_group(self):
         metadata = self._client.head_object(Bucket=self.name, Key=_PATH_SPLIT)[
             "Metadata"
         ]
