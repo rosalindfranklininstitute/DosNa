@@ -205,15 +205,6 @@ class CephGroup(BackendGroup):
             self.name, "datasets", dict2str(datasets).encode(_ENCODING)
         )
 
-    def create_link(self, path):
-        if self._has_group_object(path):
-            self._create_group_link(path)
-            return True
-        elif self._has_dataset_object(path):
-            self._create_dataset_link(path)
-            return True
-        return False
-
     def _del_group_link(self, name):
         links = str2dict(self.ioctx.get_xattr(self.name, "links").decode())
         if name in links:
@@ -265,22 +256,6 @@ class CephGroup(BackendGroup):
         self.create_link(name)
         return group
 
-    def get_group(self, path):
-        def _find_group(path):
-            group = self
-            for i in range(1, len(path) + 1):
-                links = group.get_links()
-                link_path = self.path_split.join(path[:i])
-                if link_path in links:
-                    group = group._get_group_object(link_path)
-            return group
-
-        path_elements = path.split(self.path_split)
-        group = _find_group(path_elements)
-        if group == self or group.name != path:
-            raise GroupNotFoundError(path)
-        return group
-
     def _get_group_object(self, name):
         if self._has_group_object(name):
             name = self.ioctx.get_xattr(name, "name").decode()
@@ -317,37 +292,6 @@ class CephGroup(BackendGroup):
             self.ioctx.remove_object(name)
             return True
         return False
-
-    def del_group(self, path, root=None):
-        def del_sub_group(node, root, datasets):
-            links = node.get_links()
-            for link in links:
-                node = self._get_group_object(link)
-                del_sub_group(node, root, datasets)
-                if (
-                    node.absolute_path[: len(root.absolute_path) + 1]
-                    == root.name + root.path_split
-                ):
-                    if node.get_datasets() is not {}:
-                        for data in node.get_datasets():
-                            if (
-                                data[: len(node.name) + 1]
-                                == node.name + self.path_split
-                            ):
-                                datasets.append(data)
-                    root._del_group_object(node.name)
-
-        if self.has_group(path):
-            datasets = []
-            root = self._get_group_object(path)
-            del_sub_group(root, root, datasets)
-            if root.get_datasets() is not {}:
-                for key in root.get_datasets():
-                    if key[: len(root.name) + 1] == root.name + self.path_split:
-                        datasets.append(key)
-            self._del_group_object(path)
-            return datasets
-        raise GroupNotFoundError(path)
 
     def get_attrs(self):
         return str2dict(self.ioctx.get_xattr(self.name, "attrs").decode())
