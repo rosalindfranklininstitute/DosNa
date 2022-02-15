@@ -461,3 +461,11 @@ class ParentLinkError(Exception):
         self.link = link
         self.message = "Can not delete link " + self.parent + " is parent to " + self.link
         super().__init__(self.message)
+
+
+class IndexOutOfRangeError(Exception):
+    def __init__(self, idx, max_idx):
+        self.idx = idx
+        self.max_idx = max_idx
+        self.message = "Chunk index: " + str(self.idx) + " is out of bounds. Max index is: " + str(self.max_idx)
+        super().__init__(self.message)
