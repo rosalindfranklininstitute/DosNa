@@ -236,6 +236,22 @@ class BackendGroup(ABC):
         return False
 
     @abstractmethod
+    def _create_group_link(self, name):
+        raise NotImplementedError
+
+    @abstractmethod
+    def _create_dataset_link(self, name):
+        raise NotImplementedError
+
+    @abstractmethod
+    def _del_group_link(self, name):
+        raise NotImplementedError
+
+    @abstractmethod
+    def _del_dataset_link(self, name):
+        raise NotImplementedError
+
+    @abstractmethod
     def create_dataset(
         self,
         name,
@@ -249,12 +265,15 @@ class BackendGroup(ABC):
             "`create_dataset` not implemented " "for this backend"
         )
 
+    @abstractmethod
     def get_dataset(self, name):
         raise NotImplementedError("`get_dataset` not implemented " "for this backend")
 
+    @abstractmethod
     def has_dataset(self, name):
         raise NotImplementedError("`has_dataset` not implemented " "for this backend")
 
+    @abstractmethod
     def del_dataset(self, name):
         """Remove dataset metadata only"""
         raise NotImplementedError("`del_dataset` not implemented " "for this backend")
