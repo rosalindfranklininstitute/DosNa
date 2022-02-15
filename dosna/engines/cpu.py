@@ -22,6 +22,10 @@ class CpuConnection(EngineConnection):
     def __getitem__(self, name):
         return self.get_object(name)
 
+    @property
+    def root_group(self):
+        return CpuGroup(self.instance.root_group)
+
     def get_dataset(self, name):
         dataset = self.instance.get_dataset(name)
         return CpuDataset(dataset)
