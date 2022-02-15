@@ -58,7 +58,7 @@ class CephConnection(BackendConnection):
         self._cluster.connect(timeout=self._timeout)
         self._ioctx = self._cluster.open_ioctx(self.name)
         super(CephConnection, self).connect()
-        if self.has_group_object(_PATH_SPLIT) == False:
+        if self._has_root_object() == False:
             self.create_root_group()
         self._root_group = self._get_root_group()
 
@@ -73,9 +73,7 @@ class CephConnection(BackendConnection):
         self.ioctx.set_xattr(_PATH_SPLIT, "links", str({}).encode(_ENCODING))
         self.ioctx.set_xattr(_PATH_SPLIT, "parent", str(_PATH_SPLIT).encode(_ENCODING))
 
-    def _get_root_group(
-        self,
-    ):
+    def _get_root_group(self):
         name = self.ioctx.get_xattr(_PATH_SPLIT, "name").decode()
         absolute_path = self.ioctx.get_xattr(name, "absolute_path").decode()
         group = CephGroup(self, name, absolute_path=absolute_path)
@@ -91,25 +89,18 @@ class CephConnection(BackendConnection):
     def ioctx(self):
         return self._ioctx
 
-    def create_group(self, path, attrs={}):
-        return self._root_group.create_group(path, attrs)
+    @property
+    def root_group(self):
+        return self._get_root_group()
 
-    def get_group(self, name):
-        if name == _PATH_SPLIT:
-            return self._get_root_group()
-        return self._root_group.get_group(name)
-
-    def has_group_object(self, name):
+    def _has_root_object(self):
         try:
-            valid = self.ioctx.stat(name)[0] == len(
+            valid = self.ioctx.stat(_PATH_SPLIT)[0] == len(
                 _SIGNATURE_GROUP.encode(_ENCODING)
-            ) and self.ioctx.read(name) == _SIGNATURE_GROUP.encode(_ENCODING)
+            ) and self.ioctx.read(_PATH_SPLIT) == _SIGNATURE_GROUP.encode(_ENCODING)
         except rados.ObjectNotFound:
             return False
         return valid
-
-    def del_group(self, path):
-        return self._root_group.del_group(path)
 
     def create_dataset(
         self,
