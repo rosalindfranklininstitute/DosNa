@@ -60,7 +60,6 @@ class CephConnection(BackendConnection):
         super(CephConnection, self).connect()
         if self._has_root_object() == False:
             self.create_root_group()
-        self._root_group = self._get_root_group()
 
     def create_root_group(self):
         self.ioctx.write(_PATH_SPLIT, _SIGNATURE_GROUP.encode(_ENCODING))
