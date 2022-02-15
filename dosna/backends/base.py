@@ -30,6 +30,15 @@ class BackendConnection(ABC):
     def mode(self):
         return self._mode
 
+    @property
+    @abstractmethod
+    def root_group(self) -> object:
+        """
+        Return the root group as a Group Object
+        :return: Group Object
+        """
+        raise NotImplementedError
+
     def connect(self):
         log.debug("Connecting to %s", self.name)
         self._connected = True
@@ -53,11 +62,21 @@ class BackendConnection(ABC):
     def __contains__(self, name):
         return self.has_dataset(name)
 
-    def create_group(self, name, attrs={}):
-        raise NotImplementedError("`create_group` not implemented " "for this backend")
+    @abstractmethod
+    def create_root_group(self):
+        raise NotImplementedError
 
-    def get_group(self):
-        raise NotImplementedError("`get_group` not implemented " "for this backend")
+    @abstractmethod
+    def _get_root_group(self):
+        raise NotImplementedError
+
+    @abstractmethod
+    def _has_root_object(self) -> bool:
+        """
+        Check if the root object "/" exists
+        :return: True it does exist otherwise False
+        """
+        raise NotImplementedError
 
     def create_group(self, path, attrs={}):
         return self.root_group.create_group(path, attrs)
