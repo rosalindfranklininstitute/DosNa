@@ -7,7 +7,7 @@ import unittest
 import numpy as np
 
 import dosna as dn
-from dosna.backends.base import DatasetNotFoundError
+from dosna.backends.base import DatasetNotFoundError, IndexOutOfRangeError
 from dosna.tests import configure_logger
 
 
@@ -141,6 +141,16 @@ class DatasetTest(unittest.TestCase):
     def test_get_non_existing_dataset(self):
         with self.assertRaises(DatasetNotFoundError):
             self.connection_handle.get_dataset('ThisDoesNotExist')
+
+    def test_get_chunk_out_range(self):
+        idx = tuple(self.dataset.chunk_grid)
+        with self.assertRaises(IndexOutOfRangeError):
+            self.dataset.get_chunk(idx)
+
+    def test_create_chunk_out_range(self):
+        idx = tuple(self.dataset.chunk_grid)
+        with self.assertRaises(IndexOutOfRangeError):
+            self.dataset.create_chunk(idx)
 
 
 def main():
