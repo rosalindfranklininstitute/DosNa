@@ -8,8 +8,7 @@ import numpy as np
 from dosna.backends import Backend
 from dosna.backends.base import (BackendConnection, BackendDataChunk,
                                  BackendDataset, BackendGroup, BackendLink, ConnectionError,
-                                 DatasetNotFoundError, GroupNotFoundError, GroupExistsError, DatasetExistsError,
-                                 ParentLinkError)
+                                 DatasetNotFoundError, GroupNotFoundError, GroupExistsError, DatasetExistsError,                                 ParentLinkError, IndexOutOfRangeError)
 from dosna.engines.base import ParentDatasetError
 from dosna.util import dtype2str, shape2str, str2shape, str2dict, dict2str
 from dosna.util.data import slices2shape
@@ -479,6 +478,8 @@ class CephDataset(BackendDataset):
         return '{}/{}'.format(self.name, '.'.join(map(str, idx)))
 
     def create_chunk(self, idx, data=None, slices=None):
+        if idx > self._idx_from_flat(self.total_chunks - 1):
+            raise IndexOutOfRangeError(idx, self._idx_from_flat(self.total_chunks - 1))
         if self.has_chunk(idx):
             raise Exception('DataChunk `{}{}` already exists'.format(self.name,
                                                                      idx))
@@ -493,6 +494,8 @@ class CephDataset(BackendDataset):
         return datachunk
 
     def get_chunk(self, idx):
+        if idx > self._idx_from_flat(self.total_chunks-1):
+            raise IndexOutOfRangeError(idx, self._idx_from_flat(self.total_chunks-1))
         if self.has_chunk(idx):
             name = self._idx2name(idx)
             dtype = self.dtype

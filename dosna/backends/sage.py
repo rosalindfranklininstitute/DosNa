@@ -8,7 +8,7 @@ import numpy as np
 from dosna.backends import Backend
 from dosna.backends.base import (BackendConnection, BackendDataChunk,
                                  BackendDataset, ConnectionError,
-                                 DatasetNotFoundError)
+                                 DatasetNotFoundError, IndexOutOfRangeError)
 from dosna.util import dtype2str, shape2str, str2shape
 from dosna.util.data import slices2shape
 
@@ -121,9 +121,11 @@ class SageDataset(BackendDataset):
         return np.ravel_multi_index(idx, self.chunk_grid)
 
     def create_chunk(self, idx, data=None, slices=None):
+        if idx > self._idx_from_flat(self.total_chunks - 1):
+            raise IndexOutOfRangeError(idx, self._idx_from_flat(self.total_chunks - 1))
         if self.has_chunk(idx):
             raise Exception('DataChunk `{}{}` already exists'.format(self.name,
-                                                                     idx))
+                                                                    idx))
         name = self._idx2name(idx)
         dtype = self.dtype
         shape = self.chunk_size
@@ -138,6 +140,8 @@ class SageDataset(BackendDataset):
         return datachunk
 
     def get_chunk(self, idx):
+        if idx > self._idx_from_flat(self.total_chunks - 1):
+            raise IndexOutOfRangeError(idx, self._idx_from_flat(self.total_chunks - 1))
         if self.has_chunk(idx):
             name = self._idx2name(idx)
             dtype = self.dtype

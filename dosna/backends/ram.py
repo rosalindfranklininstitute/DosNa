@@ -8,7 +8,7 @@ import numpy as np
 from dosna.backends import Backend
 from dosna.backends.base import (BackendConnection, BackendDataChunk,
                                  BackendDataset, BackendGroup, BackendLink,
-                                 DatasetNotFoundError, GroupNotFoundError)
+                                 DatasetNotFoundError, GroupNotFoundError, IndexOutOfRangeError)
 
 log = logging.getLogger(__name__)
 
@@ -374,9 +374,10 @@ class MemDataset(BackendDataset):
             self.create_chunk(idx)
 
     def create_chunk(self, idx, data=None, slices=None):
+        if idx > self._idx_from_flat(self.total_chunks-1):
+            raise IndexOutOfRangeError(idx, self._idx_from_flat(self.total_chunks-1))
         if self.has_chunk(idx):
             raise Exception("DataChunk `{}{}` already exists".format(self.name, idx))
-
         self.data_chunks[idx] = None
 
         chunk = MemDataChunk(
@@ -395,6 +396,8 @@ class MemDataset(BackendDataset):
         return chunk
 
     def get_chunk(self, idx):
+        if idx > self._idx_from_flat(self.total_chunks-1):
+            raise IndexOutOfRangeError(idx, self._idx_from_flat(self.total_chunks-1))
         if self.has_chunk(idx):
             return self.data_chunks[idx]
         return self.create_chunk(idx)
