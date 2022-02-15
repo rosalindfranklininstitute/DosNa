@@ -10,7 +10,7 @@ import numpy as np
 
 from dosna.backends import Backend
 from dosna.backends.base import (BackendConnection, BackendDataChunk,
-                                 BackendDataset, DatasetNotFoundError)
+                                 BackendDataset, DatasetNotFoundError, IndexOutOfRangeError)
 from dosna.util import DirectoryTreeMixin, dtype2str
 
 _DATASET_METADATA_FILENAME = 'dataset.h5'
@@ -121,9 +121,10 @@ class H5Dataset(BackendDataset, DirectoryTreeMixin):
         return 'chunk_{}.h5'.format('_'.join(map(str, idx)))
 
     def create_chunk(self, idx, data=None, slices=None):
+        if idx > self._idx_from_flat(self.total_chunks-1):
+            raise IndexOutOfRangeError(idx, self._idx_from_flat(self.total_chunks-1))
         if self.has_chunk(idx):
             raise Exception('DataChunk `{}` already exists'.format(idx))
-
         chunk_name = self._idx2name(idx)
         with h5.File(self.relpath(chunk_name), 'w') as file_handle:
             file_handle.create_dataset('data',
@@ -139,6 +140,8 @@ class H5Dataset(BackendDataset, DirectoryTreeMixin):
                            self.fillvalue)
 
     def get_chunk(self, idx):
+        if idx > self._idx_from_flat(self.total_chunks-1):
+            raise IndexOutOfRangeError(idx, self._idx_from_flat(self.total_chunks-1))
         if self.has_chunk(idx):
             chunk_name = self._idx2name(idx)
             with h5.File(self.relpath(chunk_name), 'r') as file_handle:
