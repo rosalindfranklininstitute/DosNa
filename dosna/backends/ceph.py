@@ -192,46 +192,15 @@ class CephGroup(BackendGroup):
     def ioctx(self):
         return self.parent.ioctx
 
-    def create_absolute_path(self, path):
-        current_path = self.absolute_path
-        if current_path == self.path_split:
-            current_path = path
-        else:
-            current_path += path
-        return current_path
-
-    def create_group(self, path, attrs={}):
-        def _create_subgroup(path, group, attrs={}):
-            path_elements = path.split(self.path_split)
-            for i in range(len(path_elements) - 2, 0, -1):
-                parent = "/".join(path_elements[:-i])
-                if group.name == parent:
-                    group = group
-                elif group.has_group(parent):
-                    group = group._get_group_object(parent)
-                else:
-                    group = group._create_group_object(parent)
-            group = group._create_group_object(path, attrs)
-            return group
-
-        if path[0] != "/":
-            path = "/" + path
-        if self.name != self.path_split:
-            path = self.name + path
-        if self.has_group(path):
-            raise GroupExistsError(path)
-        group = _create_subgroup(path, self, attrs)
-        return group
-
-    def _create_group_link(self, path):
+    def _create_group_link(self, name):
         links = str2dict(self.ioctx.get_xattr(self.name, "links").decode())
-        link_name = self.name + "->" + path
-        links[path] = {"name": link_name, "source": self.name, "target": path}
+        link_name = self.name + "->" + name
+        links[name] = {"name": link_name, "source": self.name, "target": name}
         self.ioctx.set_xattr(self.name, "links", dict2str(links).encode(_ENCODING))
 
-    def _create_dataset_link(self, path):
+    def _create_dataset_link(self, name):
         datasets = str2dict(self.ioctx.get_xattr(self.name, "datasets").decode())
-        datasets[path] = path
+        datasets[name] = name
         self.ioctx.set_xattr(
             self.name, "datasets", dict2str(datasets).encode(_ENCODING)
         )
@@ -280,20 +249,20 @@ class CephGroup(BackendGroup):
             return True
         return False
 
-    def _create_group_object(self, path, attrs={}):
+    def _create_group_object(self, name, attrs={}):
         attrs = {str(key): str(value) for key, value in attrs.items()}
-        absolute_path = self.create_absolute_path(path)
-        self.ioctx.write(path, _SIGNATURE_GROUP.encode(_ENCODING))
-        self.ioctx.set_xattr(path, "name", str(path).encode(_ENCODING))
-        self.ioctx.set_xattr(path, "attrs", str(attrs).encode(_ENCODING))
+        absolute_path = self.create_absolute_path(name)
+        self.ioctx.write(name, _SIGNATURE_GROUP.encode(_ENCODING))
+        self.ioctx.set_xattr(name, "name", str(name).encode(_ENCODING))
+        self.ioctx.set_xattr(name, "attrs", str(attrs).encode(_ENCODING))
         self.ioctx.set_xattr(
-            path, "absolute_path", str(absolute_path).encode(_ENCODING)
+            name, "absolute_path", str(absolute_path).encode(_ENCODING)
         )
-        self.ioctx.set_xattr(path, "datasets", str({}).encode(_ENCODING))
-        self.ioctx.set_xattr(path, "links", str({}).encode(_ENCODING))
-        self.ioctx.set_xattr(path, "parent", str(self.name).encode(_ENCODING))
-        group = CephGroup(self, path, absolute_path)
-        self.create_link(path)
+        self.ioctx.set_xattr(name, "datasets", str({}).encode(_ENCODING))
+        self.ioctx.set_xattr(name, "links", str({}).encode(_ENCODING))
+        self.ioctx.set_xattr(name, "parent", str(self.name).encode(_ENCODING))
+        group = CephGroup(self, name, absolute_path)
+        self.create_link(name)
         return group
 
     def get_group(self, path):
@@ -338,14 +307,14 @@ class CephGroup(BackendGroup):
             return False
         return valid
 
-    def _del_group_object(self, path):
-        if self._has_group_object(path):
-            parent = self.ioctx.get_xattr(path, "parent").decode()
+    def _del_group_object(self, name):
+        if self._has_group_object(name):
+            parent = self.ioctx.get_xattr(name, "parent").decode()
             if self._has_group_object(parent):
                 links = str2dict(self.ioctx.get_xattr(parent, "links").decode())
-                del links[path]
+                del links[name]
                 self.ioctx.set_xattr(parent, "links", dict2str(links).encode(_ENCODING))
-            self.ioctx.remove_object(path)
+            self.ioctx.remove_object(name)
             return True
         return False
 
