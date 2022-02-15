@@ -12,12 +12,11 @@ log = logging.getLogger(__name__)
 
 
 class BackendConnection(object):
-
     def __init__(self, name, open_mode="a", *args, **kwargs):
         self._name = name
         self._connected = False
         self._mode = open_mode
-        log.debug('Extra connection options: args=%s kwargs=%s', args, kwargs)
+        log.debug("Extra connection options: args=%s kwargs=%s", args, kwargs)
 
     @property
     def name(self):
@@ -53,40 +52,44 @@ class BackendConnection(object):
 
     def __contains__(self, name):
         return self.has_dataset(name)
-    
-    def create_group(self, name, attrs={}):
-        raise NotImplementedError('`create_group` not implemented '
-                                  'for this backend')
-    def get_group(self):
-        raise NotImplementedError('`get_group` not implemented '
-                                  'for this backend')
-    def has_group(self):
-        raise NotImplementedError('`has_group` not implemented '
-                                  'for this backend')
-    def del_group(self):
-        raise NotImplementedError('`del_group` not implemented '
-                                  'for this backend')
 
-    def create_dataset(self, name, shape=None, dtype=np.float32, fillvalue=0,
-                       data=None, chunk_size=None):
-        raise NotImplementedError('`create_dataset` not implemented '
-                                  'for this backend')
+    def create_group(self, name, attrs={}):
+        raise NotImplementedError("`create_group` not implemented " "for this backend")
+
+    def get_group(self):
+        raise NotImplementedError("`get_group` not implemented " "for this backend")
+
+    def has_group(self):
+        raise NotImplementedError("`has_group` not implemented " "for this backend")
+
+    def del_group(self):
+        raise NotImplementedError("`del_group` not implemented " "for this backend")
+
+    def create_dataset(
+        self,
+        name,
+        shape=None,
+        dtype=np.float32,
+        fillvalue=0,
+        data=None,
+        chunk_size=None,
+    ):
+        raise NotImplementedError(
+            "`create_dataset` not implemented " "for this backend"
+        )
 
     def get_dataset(self, name):
-        raise NotImplementedError('`get_dataset` not implemented '
-                                  'for this backend')
+        raise NotImplementedError("`get_dataset` not implemented " "for this backend")
 
     def has_dataset(self, name):
-        raise NotImplementedError('`has_dataset` not implemented '
-                                  'for this backend')
+        raise NotImplementedError("`has_dataset` not implemented " "for this backend")
 
     def del_dataset(self, name):
         """Remove dataset metadata only"""
-        raise NotImplementedError('`del_dataset` not implemented '
-                                  'for this backend')
-        
+        raise NotImplementedError("`del_dataset` not implemented " "for this backend")
+
+
 class BackendGroup(object):
-    
     def __init__(self, parent, name, *args, **kwargs):
         self._parent = parent
         self._name = name
@@ -98,51 +101,55 @@ class BackendGroup(object):
     @property
     def parent(self):
         return self._parent
-    
+
     def __getitem__(self, name):
         return self.get_dataset(name)
 
     def __contains__(self, name):
         return self.has_dataset(name)
-    
+
     def create_group(self, parent, name, attrs={}):
-        raise NotImplementedError('`create_group` not implemented '
-                                  'for this backend')
+        raise NotImplementedError("`create_group` not implemented " "for this backend")
+
     def get_group(self):
-        raise NotImplementedError('`get_group` not implemented '
-                                  'for this backend')
+        raise NotImplementedError("`get_group` not implemented " "for this backend")
+
     def has_group(self):
-        raise NotImplementedError('`has_group` not implemented '
-                                  'for this backend')
+        raise NotImplementedError("`has_group` not implemented " "for this backend")
+
     def del_group(self):
-        raise NotImplementedError('`del_group` not implemented '
-                                  'for this backend')
-    
-    def create_dataset(self, name, shape=None, dtype=np.float32, fillvalue=0,
-                       data=None, chunk_size=None):
-        raise NotImplementedError('`create_dataset` not implemented '
-                                  'for this backend')
+        raise NotImplementedError("`del_group` not implemented " "for this backend")
+
+    def create_dataset(
+        self,
+        name,
+        shape=None,
+        dtype=np.float32,
+        fillvalue=0,
+        data=None,
+        chunk_size=None,
+    ):
+        raise NotImplementedError(
+            "`create_dataset` not implemented " "for this backend"
+        )
 
     def get_dataset(self, name):
-        raise NotImplementedError('`get_dataset` not implemented '
-                                  'for this backend')
+        raise NotImplementedError("`get_dataset` not implemented " "for this backend")
 
     def has_dataset(self, name):
-        raise NotImplementedError('`has_dataset` not implemented '
-                                  'for this backend')
+        raise NotImplementedError("`has_dataset` not implemented " "for this backend")
 
     def del_dataset(self, name):
         """Remove dataset metadata only"""
-        raise NotImplementedError('`del_dataset` not implemented '
-                                  'for this backend')
-        
+        raise NotImplementedError("`del_dataset` not implemented " "for this backend")
+
+
 class BackendLink(object):
-    
     def __init__(self, source, target, path):
         self._source = source
         self._target = target
         self._path = path
-        
+
     @property
     def source(self):
         return self._source
@@ -154,15 +161,14 @@ class BackendLink(object):
     @property
     def name(self):
         return self._path
-    
 
 
 class BackendDataset(object):
+    def __init__(
+        self, connection, name, shape, dtype, fillvalue, chunk_grid, chunk_size
+    ):
 
-    def __init__(self, connection, name, shape, dtype, fillvalue, chunk_grid,
-                 chunk_size):
-
-        #if not connection.has_dataset(name):
+        # if not connection.has_dataset(name):
         #    raise Exception('Wrong initialization of a Dataset')
 
         self._connection = connection
@@ -215,20 +221,16 @@ class BackendDataset(object):
     # To be implementd by Storage Backend
 
     def create_chunk(self, idx, data=None, slices=None):
-        raise NotImplementedError('`create_chunk` not implemented '
-                                  'for this backend')
+        raise NotImplementedError("`create_chunk` not implemented " "for this backend")
 
     def get_chunk(self, idx):
-        raise NotImplementedError('`get_chunk` not implemented '
-                                  'for this backend')
+        raise NotImplementedError("`get_chunk` not implemented " "for this backend")
 
     def has_chunk(self, idx):
-        raise NotImplementedError('`has_chunk` not implemented '
-                                  'for this backend')
+        raise NotImplementedError("`has_chunk` not implemented " "for this backend")
 
     def del_chunk(self, idx):
-        raise NotImplementedError('`del_chunk` not implemented '
-                                  'for this backend')
+        raise NotImplementedError("`del_chunk` not implemented " "for this backend")
 
     # Standard implementations, could be overriden for more efficient access
 
@@ -246,12 +248,20 @@ class BackendDataset(object):
         return tuple(map(int, np.unravel_index(idx, self.chunk_grid)))
 
     def _local_chunk_bounds(self, idx):
-        return tuple((slice(0, min((i + 1) * s, self.shape[j]) - i * s)
-                      for j, (i, s) in enumerate(zip(idx, self.chunk_size))))
+        return tuple(
+            (
+                slice(0, min((i + 1) * s, self.shape[j]) - i * s)
+                for j, (i, s) in enumerate(zip(idx, self.chunk_size))
+            )
+        )
 
     def _global_chunk_bounds(self, idx):
-        return tuple((slice(i * s, min((i + 1) * s, self.shape[j]))
-                      for j, (i, s) in enumerate(zip(idx, self.chunk_size))))
+        return tuple(
+            (
+                slice(i * s, min((i + 1) * s, self.shape[j]))
+                for j, (i, s) in enumerate(zip(idx, self.chunk_size))
+            )
+        )
 
     def _process_slices(self, slices, squeeze=False):
         if isinstance(slices, (slice, int)):
@@ -261,8 +271,9 @@ class BackendDataset(object):
         elif np.isscalar(slices):
             slices = [int(slices)]
         elif not isinstance(slices, (list, tuple)):
-            raise Exception('Invalid Slicing with index of type `{}`'
-                            .format(type(slices)))
+            raise Exception(
+                "Invalid Slicing with index of type `{}`".format(type(slices))
+            )
         else:
             slices = list(slices)
 
@@ -270,14 +281,16 @@ class BackendDataset(object):
             nmiss = self.ndim - len(slices)
             while Ellipsis in slices:
                 idx = slices.index(Ellipsis)
-                slices = slices[:idx] + ([slice(None)] * (nmiss + 1)) \
-                    + slices[idx + 1:]
+                slices = (
+                    slices[:idx] + ([slice(None)] * (nmiss + 1)) + slices[idx + 1 :]
+                )
             if len(slices) < self.ndim:
                 slices = list(slices) + ([slice(None)] * nmiss)
         elif len(slices) > self.ndim:
-            raise Exception('Invalid slicing of dataset of dimension `{}`'
-                            ' with {}-dimensional slicing'
-                            .format(self.ndim, len(slices)))
+            raise Exception(
+                "Invalid slicing of dataset of dimension `{}`"
+                " with {}-dimensional slicing".format(self.ndim, len(slices))
+            )
         final_slices = []
         shape = self.shape
         squeeze_axis = []
@@ -287,8 +300,11 @@ class BackendDataset(object):
                     final_slices.append(slice(slice_, slice_ + 1))
                     squeeze_axis.append(index)
                 else:
-                    raise IndexError("index {} is out of bounds for axis {} with size {}"
-                                     .format(slice_, index, shape[index]))
+                    raise IndexError(
+                        "index {} is out of bounds for axis {} with size {}".format(
+                            slice_, index, shape[index]
+                        )
+                    )
             elif isinstance(slice_, slice):
                 start = slice_.start
                 stop = slice_.stop
@@ -299,19 +315,23 @@ class BackendDataset(object):
                 elif stop < 0:
                     stop = self.shape[index] + stop
                 if start < 0 or start >= self.shape[index]:
-                    raise Exception('Only possitive and '
-                                    'in-bounds slicing supported: `{}`'
-                                    .format(slices))
+                    raise Exception(
+                        "Only possitive and "
+                        "in-bounds slicing supported: `{}`".format(slices)
+                    )
                 if stop < 0 or stop > self.shape[index] or stop < start:
-                    raise Exception('Only possitive and '
-                                    'in-bounds slicing supported: `{}`'
-                                    .format(slices))
+                    raise Exception(
+                        "Only possitive and "
+                        "in-bounds slicing supported: `{}`".format(slices)
+                    )
                 if slice_.step is not None and slice_.step != 1:
-                    raise Exception('Only slicing with step 1 supported')
+                    raise Exception("Only slicing with step 1 supported")
                 final_slices.append(slice(start, stop))
             else:
-                raise Exception('Invalid type `{}` in slicing, only integer or'
-                                ' slices are supported'.format(type(slice_)))
+                raise Exception(
+                    "Invalid type `{}` in slicing, only integer or"
+                    " slices are supported".format(type(slice_))
+                )
 
         if squeeze:
             return final_slices, tuple(squeeze_axis)
@@ -332,8 +352,7 @@ class BackendDataset(object):
 
         for index, slc in enumerate(slices):
             sstart = slc.start // chunk_size[index]
-            sstop = min((slc.stop - 1) // chunk_size[index],
-                        chunk_grid[index] - 1)
+            sstop = min((slc.stop - 1) // chunk_size[index], chunk_grid[index] - 1)
             if sstop < 0:
                 sstop = 0
 
@@ -357,20 +376,22 @@ class BackendDataset(object):
             cslices += [_c]
             gslices += [_g]
 
-        return (zip(*
+        return (
+            zip(
+                *(
                     (
-                        (
-                            indexes[n][i],
-                            cslices[n][i],
-                            (n < ndim or None) and gslices[n][i],
-                        )
-                        for n, i in enumerate(idx)
-                    ))
-                for idx in self._ndindex(nchunks))
+                        indexes[n][i],
+                        cslices[n][i],
+                        (n < ndim or None) and gslices[n][i],
+                    )
+                    for n, i in enumerate(idx)
+                )
+            )
+            for idx in self._ndindex(nchunks)
+        )
 
 
 class BackendDataChunk(object):
-
     def __init__(self, dataset, idx, name, shape, dtype, fillvalue):
         self._dataset = dataset
         self._idx = idx
@@ -410,12 +431,10 @@ class BackendDataChunk(object):
         return self._byte_count
 
     def get_data(self, slices=None):
-        raise NotImplementedError('`get_data` not implemented '
-                                  'for this backend')
+        raise NotImplementedError("`get_data` not implemented " "for this backend")
 
     def set_data(self, values, slices=None):
-        raise NotImplementedError('`set_data` not implemented '
-                                  'for this backend')
+        raise NotImplementedError("`set_data` not implemented " "for this backend")
 
     def __getitem__(self, slices):
         return self.get_data(slices=slices)
@@ -455,11 +474,14 @@ class GroupNotFoundError(Exception):
         self.message = "Group " + self.group + " does not exist"
         super().__init__(self.message)
 
+
 class ParentLinkError(Exception):
     def __init__(self, parent, link):
         self.parent = parent
         self.link = link
-        self.message = "Can not delete link " + self.parent + " is parent to " + self.link
+        self.message = (
+            "Can not delete link " + self.parent + " is parent to " + self.link
+        )
         super().__init__(self.message)
 
 
@@ -467,5 +489,10 @@ class IndexOutOfRangeError(Exception):
     def __init__(self, idx, max_idx):
         self.idx = idx
         self.max_idx = max_idx
-        self.message = "Chunk index: " + str(self.idx) + " is out of bounds. Max index is: " + str(self.max_idx)
+        self.message = (
+            "Chunk index: "
+            + str(self.idx)
+            + " is out of bounds. Max index is: "
+            + str(self.max_idx)
+        )
         super().__init__(self.message)

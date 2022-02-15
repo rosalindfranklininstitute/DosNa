@@ -9,26 +9,26 @@ from dosna.util import named_module
 log = logging.getLogger(__name__)
 
 _current = None
-AVAILABLE = ['ram', 'hdf5', 'ceph', 'sage', 's3']
+AVAILABLE = ["ram", "hdf5", "ceph", "sage", "s3"]
 
 # Currently there is no need for more fancy attributes
-Backend = namedtuple('Backend', ['name', 'Connection', 'Dataset', 'DataChunk'])
+Backend = namedtuple("Backend", ["name", "Connection", "Dataset", "DataChunk"])
 
 
 def use_backend(backend):
     backend = backend.lower()
     global _current
     if backend in AVAILABLE:
-        module_ = named_module('dosna.backends.{}'.format(backend))
-        if hasattr(module_, '_backend'):
-            log.debug('Switching backend to `%s`', module_._backend.name)
+        module_ = named_module("dosna.backends.{}".format(backend))
+        if hasattr(module_, "_backend"):
+            log.debug("Switching backend to `%s`", module_._backend.name)
             _current = module_._backend
         else:
-            raise Exception(
-                'Module `{}` is not a proper backend.'.format(backend))
+            raise Exception("Module `{}` is not a proper backend.".format(backend))
     else:
-        raise Exception('Backend `{}` not available! Choose from: {}'
-                        .format(backend, AVAILABLE))
+        raise Exception(
+            "Backend `{}` not available! Choose from: {}".format(backend, AVAILABLE)
+        )
 
 
 def get_backend(name=None):
