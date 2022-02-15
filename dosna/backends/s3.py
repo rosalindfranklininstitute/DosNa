@@ -84,9 +84,8 @@ class S3Connection(BackendConnection):
         )
         self._client.create_bucket(Bucket=self.name)
         super(S3Connection, self).connect()
-        if self.has_group_object(_PATH_SPLIT) == False:
+        if self._has_root_object() == False:
             self.create_root_group()
-        self._root_group = self._get_root_group()
 
     def create_root_group(self):
         metadata = {
@@ -123,28 +122,21 @@ class S3Connection(BackendConnection):
         return self._client
 
     @property
+    def root_group(self):
+        return self._get_root_group()
+
+    @property
     def bucket_name(self):
         return self.name
 
-    def create_group(self, path, attrs={}):
-        return self._root_group.create_group(path, attrs)
-
-    def get_group(self, name):
-        if name == _PATH_SPLIT:
-            return self._get_root_group()
-        return self._root_group.get_group(name)
-
-    def has_group_object(self, name):
+    def _has_root_object(self):
         try:
-            valid = self._client.get_object(Bucket=self.name, Key=name)[
+            valid = self._client.get_object(Bucket=self.bucket_name, Key=_PATH_SPLIT)[
                 "Body"
             ].read() == _SIGNATURE_GROUP.encode(_ENCODING)
         except Exception:  # Any exception it should return false
             return False
         return valid
-
-    def del_group(self, path):
-        return self._root_group.del_group(path)
 
     def create_dataset(
         self,
