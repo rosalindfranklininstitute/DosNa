@@ -117,7 +117,7 @@ class BackendConnection(ABC):
         raise NotImplementedError("`del_dataset` not implemented " "for this backend")
 
 
-class BackendGroup(object):
+class BackendGroup(ABC):
     def __init__(self, parent, name, *args, **kwargs):
         self._parent = parent
         self._name = name
@@ -136,18 +136,106 @@ class BackendGroup(object):
     def __contains__(self, name):
         return self.has_dataset(name)
 
-    def create_group(self, parent, name, attrs={}):
-        raise NotImplementedError("`create_group` not implemented " "for this backend")
+    def create_absolute_path(self, path):
+        current_path = self.absolute_path
+        if current_path == self.path_split:
+            current_path = path
+        else:
+            current_path += path
+        return current_path
 
-    def get_group(self):
-        raise NotImplementedError("`get_group` not implemented " "for this backend")
+    def create_group(self, path, attrs={}):
+        def _create_subgroup(path, group, attrs={}):
+            path_elements = path.split(self.path_split)
+            for i in range(len(path_elements) - 2, 0, -1):
+                parent = "/".join(path_elements[:-i])
+                if group.name == parent:
+                    group = group
+                elif group._has_group_object(parent):
+                    group = group._get_group_object(parent)
+                else:
+                    group = group._create_group_object(parent)
+            group = group._create_group_object(path, attrs)
+            return group
+        if path[0] != "/":
+            path = "/" + path
+        if self.name != self.path_split:
+            path = self.name + path
+        if self._has_group_object(path):
+            raise GroupExistsError(path)
+        group = _create_subgroup(path, self, attrs)
+        return group
 
+    def get_group(self, path):
+        def _find_group(path):
+            group = self
+            for i in range(1, len(path) + 1):
+                links = group.get_links()
+                link_path = self.path_split.join(path[:i])
+                if link_path in links:
+                    group = group._get_group_object(link_path)
+            return group
+
+        path_elements = path.split(self.path_split)
+        group = _find_group(path_elements)
+        if group == self or group.name != path:
+            raise GroupNotFoundError(path)
+        return group
+
+    @abstractmethod
     def has_group(self):
         raise NotImplementedError("`has_group` not implemented " "for this backend")
 
-    def del_group(self):
-        raise NotImplementedError("`del_group` not implemented " "for this backend")
+    def del_group(self, path, root=None):
+        def del_sub_group(node, root, datasets):
+            links = node.get_links()
+            for link in links:
+                node = self._get_group_object(link)
+                del_sub_group(node, root, datasets)
+                if (
+                    node.absolute_path[: len(root.absolute_path) + 1]
+                    == root.name + root.path_split
+                ):
+                    if node.get_datasets() is not {}:
+                        for data in node.get_datasets():
+                            if (
+                                data[: len(node.name) + 1]
+                                == node.name + self.path_split
+                            ):
+                                datasets.append(data)
+                    root._del_group_object(node.name)
 
+        if self._has_group_object(path):
+            datasets = []
+            root = self._get_group_object(path)
+            del_sub_group(root, root, datasets)
+            if root.get_datasets() is not {}:
+                for key in root.get_datasets():
+                    if key[: len(root.name) + 1] == root.name + self.path_split:
+                        datasets.append(key)
+            self._del_group_object(path)
+            return datasets
+        raise GroupNotFoundError(path)
+
+    def create_link(self, path):
+        if self._has_group_object(path):
+            self._create_group_link(path)
+            return True
+        elif self._has_dataset_object(path):
+            self._create_dataset_link(path)
+            return True
+        return False
+
+    def del_link(self, name):
+        if self._has_group_object(name):
+            self._del_group_link(name)
+            return True
+        elif self._has_dataset_object(name):
+            self._del_dataset_link(name)
+            return True
+        return False
+
+    @abstractmethod
     def create_dataset(
         self,
         name,
