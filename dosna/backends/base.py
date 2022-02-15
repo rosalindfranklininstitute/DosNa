@@ -103,12 +103,15 @@ class BackendConnection(ABC):
             "`create_dataset` not implemented " "for this backend"
         )
 
+    @abstractmethod
     def get_dataset(self, name):
         raise NotImplementedError("`get_dataset` not implemented " "for this backend")
 
+    @abstractmethod
     def has_dataset(self, name):
         raise NotImplementedError("`has_dataset` not implemented " "for this backend")
 
+    @abstractmethod
     def del_dataset(self, name):
         """Remove dataset metadata only"""
         raise NotImplementedError("`del_dataset` not implemented " "for this backend")
