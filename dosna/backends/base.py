@@ -3,15 +3,15 @@
 
 import logging
 from itertools import product
-
+from abc import ABC, abstractmethod
 import numpy as np
 
-from six.moves import range
 
 log = logging.getLogger(__name__)
+_PATH_SPLIT = "/"
 
 
-class BackendConnection(object):
+class BackendConnection(ABC):
     def __init__(self, name, open_mode="a", *args, **kwargs):
         self._name = name
         self._connected = False
@@ -59,12 +59,18 @@ class BackendConnection(object):
     def get_group(self):
         raise NotImplementedError("`get_group` not implemented " "for this backend")
 
-    def has_group(self):
-        raise NotImplementedError("`has_group` not implemented " "for this backend")
+    def create_group(self, path, attrs={}):
+        return self.root_group.create_group(path, attrs)
 
-    def del_group(self):
-        raise NotImplementedError("`del_group` not implemented " "for this backend")
+    def get_group(self, name):
+        if name == _PATH_SPLIT:
+            return self._get_root_group()
+        return self.root_group.get_group(name)
 
+    def del_group(self, path):
+        return self.root_group.del_group(path)
+
+    @abstractmethod
     def create_dataset(
         self,
         name,
