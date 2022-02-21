@@ -6,6 +6,7 @@ from itertools import product
 from abc import ABC, abstractmethod
 import numpy as np
 
+from dosna.backends.exceptions import GroupExistsError, GroupNotFoundError
 
 log = logging.getLogger(__name__)
 _PATH_SPLIT = "/"

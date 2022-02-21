@@ -12,15 +12,15 @@ from dosna.backends.base import (
     BackendDataset,
     BackendGroup,
     BackendLink,
-    ConnectionError,
+)
+from dosna.backends.exceptions import (
+    DatasetExistsError,
     DatasetNotFoundError,
     GroupNotFoundError,
-    GroupExistsError,
-    DatasetExistsError,
     ParentLinkError,
     IndexOutOfRangeError,
+    ConnectionError,
 )
-from dosna.engines.base import ParentDatasetError
 from dosna.util import dtype2str, shape2str, str2shape, str2dict, dict2str
 from dosna.util.data import slices2shape
 
@@ -75,7 +75,7 @@ class CephConnection(BackendConnection):
     def _get_root_group(self):
         name = self.ioctx.get_xattr(_PATH_SPLIT, "name").decode()
         absolute_path = self.ioctx.get_xattr(name, "absolute_path").decode()
-        group = CephGroup(self, name, absolute_path=absolute_path)
+        group = CephGroup(self, name, absolute_path)
         return group
 
     def disconnect(self):
@@ -183,14 +183,40 @@ class CephLink(BackendLink):
 
 
 class CephGroup(BackendGroup):
-    def __init__(self, parent, name, absolute_path, path_split="/"):
-        super(CephGroup, self).__init__(parent, name)
-        self.path_split = path_split
-        self.absolute_path = absolute_path
+    def __init__(self, parent, name, absolute_path):
+        super(CephGroup, self).__init__(parent, name, absolute_path)
 
     @property
     def ioctx(self):
         return self.parent.ioctx
+
+    @property
+    def datasets(self):
+        datasets = str2dict(self.ioctx.get_xattr(self.name, "datasets").decode())
+        return datasets
+
+    @property
+    def links(self):
+        links = str2dict(self.ioctx.get_xattr(self.name, "links").decode())
+        for key, value in links.items():
+            path = value["name"]
+            source = value["source"]
+            target = value["target"]
+            if self.has_group(value["target"]):
+                links[key] = CephLink(source, target, path)
+            else:
+                target = None
+                links[key] = CephLink(source, target, path)
+        return links
+
+    @property
+    def attrs(self):
+        return str2dict(self.ioctx.get_xattr(self.name, "attrs").decode())
+
+    @attrs.setter
+    def attrs(self, attrs):
+        self.ioctx.set_xattr(self.name, "attrs", dict2str(attrs).encode(_ENCODING))
+        return str2dict(self.ioctx.get_xattr(self.name, "attrs").decode())
 
     def _create_group_link(self, name):
         links = str2dict(self.ioctx.get_xattr(self.name, "links").decode())

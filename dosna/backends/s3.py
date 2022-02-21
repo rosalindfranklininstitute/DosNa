@@ -14,13 +14,14 @@ from dosna.backends.base import (
     BackendDataset,
     BackendGroup,
     BackendLink,
-    ConnectionError,
+)
+from dosna.backends.exceptions import (
+    DatasetExistsError,
     DatasetNotFoundError,
-    GroupExistsError,
     GroupNotFoundError,
     ParentLinkError,
-    DatasetExistsError,
     IndexOutOfRangeError,
+    ConnectionError,
 )
 from dosna.util import dtype2str, shape2str, str2shape, str2dict, dict2str
 from dosna.util.data import slices2shape
