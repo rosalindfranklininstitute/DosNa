@@ -194,7 +194,7 @@ class BackendGroup(ABC):
         group = _create_subgroup(name, self, attrs)
         return group
 
-    def get_group(self, name):
+    def get_group(self, name: str) -> "BackendGroup":
         def _find_group(name):
             group = self
             for i in range(1, len(name) + 1):
@@ -213,7 +213,7 @@ class BackendGroup(ABC):
     def has_group(self):
         raise NotImplementedError("`has_group` not implemented " "for this backend")
 
-    def del_group(self, name):
+    def del_group(self, name: str) -> List[str]:
         def del_sub_group(node, root, datasets):
             groups = node.groups
             for group in groups:
@@ -244,7 +244,7 @@ class BackendGroup(ABC):
             return datasets
         raise GroupNotFoundError(name)
 
-    def create_link(self, name):
+    def create_link(self, name: str) -> bool:
         if self._has_group_object(name):
             self._create_group_link(name)
             return True
@@ -253,7 +253,7 @@ class BackendGroup(ABC):
             return True
         return False
 
-    def del_link(self, name):
+    def del_link(self, name: str) -> bool:
         if self._has_group_object(name):
             self._del_group_link(name)
             return True
@@ -263,45 +263,45 @@ class BackendGroup(ABC):
         return False
 
     @abstractmethod
-    def _create_group_link(self, name):
+    def _create_group_link(self, name: str) -> None:
         raise NotImplementedError
 
     @abstractmethod
-    def _create_dataset_link(self, name):
+    def _create_dataset_link(self, name: str) -> None:
         raise NotImplementedError
 
     @abstractmethod
-    def _del_group_link(self, name):
+    def _del_group_link(self, name: str) -> None:
         raise NotImplementedError
 
     @abstractmethod
-    def _del_dataset_link(self, name):
+    def _del_dataset_link(self, name: str) -> None:
         raise NotImplementedError
 
     @abstractmethod
     def create_dataset(
         self,
-        name,
+        name: str,
         shape=None,
         dtype=np.float32,
         fillvalue=0,
         data=None,
         chunk_size=None,
-    ):
+    ) -> "BackendDataset":
         raise NotImplementedError(
             "`create_dataset` not implemented " "for this backend"
         )
 
     @abstractmethod
-    def get_dataset(self, name):
+    def get_dataset(self, name: str) -> "BackendDataset":
         raise NotImplementedError("`get_dataset` not implemented " "for this backend")
 
     @abstractmethod
-    def has_dataset(self, name):
+    def has_dataset(self, name: str) -> bool:
         raise NotImplementedError("`has_dataset` not implemented " "for this backend")
 
     @abstractmethod
-    def del_dataset(self, name):
+    def del_dataset(self, name: str) -> None:
         """Remove dataset metadata only"""
         raise NotImplementedError("`del_dataset` not implemented " "for this backend")
 
