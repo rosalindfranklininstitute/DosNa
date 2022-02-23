@@ -163,7 +163,19 @@ class BackendGroup(ABC):
     def attrs(self, attrs: dict) -> None:
         raise NotImplementedError
 
-    def create_absolute_path(self, name):
+    def __getitem__(self, name: str) -> "BackendGroup" | "BackendDataset" | None:
+        try:
+            group = self.get_group(name)
+            return group
+        except:
+            pass
+        try:
+            dataset = self.get_dataset(name)
+            return dataset
+        except:
+            pass
+
+    def create_absolute_path(self, name: str) -> str:
         current_path = self.absolute_path
         if current_path == self.path_split:
             current_path = name
