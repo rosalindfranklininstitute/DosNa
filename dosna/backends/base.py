@@ -1,7 +1,9 @@
 #!/usr/bin/env python
 """Base classes for every backend"""
+from __future__ import annotations
 
 import logging
+from typing import List
 from itertools import product
 from abc import ABC, abstractmethod
 import numpy as np
@@ -169,7 +171,7 @@ class BackendGroup(ABC):
             current_path += name
         return current_path
 
-    def create_group(self, name, attrs={}):
+    def create_group(self, name: str, attrs={}) -> "BackendGroup":
         def _create_subgroup(name, group, attrs={}):
             path_elements = name.split(self.path_split)
             for i in range(len(path_elements) - 2, 0, -1):
@@ -196,10 +198,9 @@ class BackendGroup(ABC):
         def _find_group(name):
             group = self
             for i in range(1, len(name) + 1):
-                links = group.get_links()
-                link_path = self.path_split.join(name[:i])
-                if link_path in links:
-                    group = group._get_group_object(link_path)
+                group_path = self.path_split.join(name[:i])
+                if group_path in group.groups:
+                    group = group._get_group_object(group_path)
             return group
 
         path_elements = name.split(self.path_split)
@@ -214,16 +215,16 @@ class BackendGroup(ABC):
 
     def del_group(self, name):
         def del_sub_group(node, root, datasets):
-            links = node.get_links()
-            for link in links:
-                node = self._get_group_object(link)
+            groups = node.groups
+            for group in groups:
+                node = self._get_group_object(group)
                 del_sub_group(node, root, datasets)
                 if (
                     node.absolute_path[: len(root.absolute_path) + 1]
                     == root.name + root.path_split
                 ):
-                    if node.get_datasets() is not {}:
-                        for data in node.get_datasets():
+                    if node.datasets is not {}:
+                        for data in node.datasets:
                             if (
                                 data[: len(node.name) + 1]
                                 == node.name + self.path_split
@@ -235,8 +236,8 @@ class BackendGroup(ABC):
             datasets = []
             root = self._get_group_object(name)
             del_sub_group(root, root, datasets)
-            if root.get_datasets() is not {}:
-                for key in root.get_datasets():
+            if root.datasets is not {}:
+                for key in root.datasets:
                     if key[: len(root.name) + 1] == root.name + self.path_split:
                         datasets.append(key)
             self._del_group_object(name)
