@@ -209,10 +209,6 @@ class BackendGroup(ABC):
             raise GroupNotFoundError(name)
         return group
 
-    @abstractmethod
-    def has_group(self):
-        raise NotImplementedError("`has_group` not implemented " "for this backend")
-
     def del_group(self, name: str) -> List[str]:
         def del_sub_group(node, root, datasets):
             groups = node.groups
