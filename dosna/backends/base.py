@@ -175,6 +175,13 @@ class BackendGroup(ABC):
         except:
             pass
 
+    def __contains__(self, name: str) -> bool:
+        if name in self.groups:
+            return True
+        if name in self.datasets:
+            return True
+        return False
+
     def create_absolute_path(self, name: str) -> str:
         current_path = self.absolute_path
         if current_path == self.path_split:
