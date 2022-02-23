@@ -119,23 +119,47 @@ class BackendConnection(ABC):
 
 
 class BackendGroup(ABC):
-    def __init__(self, parent, name, *args, **kwargs):
+    def __init__(self, parent, name, absolute_path, *args, **kwargs):
         self._parent = parent
         self._name = name
+        self._absolute_path = absolute_path
+        self._path_split = _PATH_SPLIT
 
     @property
-    def name(self):
+    def name(self) -> str:
         return self._name
 
     @property
-    def parent(self):
+    def parent(self) -> str:
         return self._parent
 
-    def __getitem__(self, name):  # Not sure?
-        return self.get_dataset(name)
+    @property
+    def absolute_path(self) -> str:
+        return self._absolute_path
 
-    def __contains__(self, name):  # Not sure
-        return self.has_dataset(name)
+    @property
+    def path_split(self) -> str:
+        return self._path_split
+
+    @property
+    @abstractmethod
+    def datasets(self) -> dict:
+        raise NotImplementedError
+
+    @property
+    @abstractmethod
+    def groups(self) -> dict:
+        raise NotImplementedError
+
+    @property
+    @abstractmethod
+    def attrs(self) -> dict:
+        raise NotImplementedError
+
+    @attrs.setter
+    @abstractmethod
+    def attrs(self, attrs: dict) -> None:
+        raise NotImplementedError
 
     def create_absolute_path(self, name):
         current_path = self.absolute_path
@@ -158,6 +182,7 @@ class BackendGroup(ABC):
                     group = group._create_group_object(parent)
             group = group._create_group_object(name, attrs)
             return group
+
         if name[0] != "/":
             name = "/" + name
         if self.name != self.path_split:
